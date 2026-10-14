@@ -4,167 +4,121 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <title>Círculo Cromático</title>
-  <meta name="description" content="Rueda cromática interactiva de 12 colores según la teoría tradicional RYB. Gira la rueda, elige un color y descubre su tríada.">
+  <meta name="description" content="Rueda cromática de 12 colores según la teoría tradicional RYB. Gira la rueda, elige un color y descubre su tríada.">
   <meta name="theme-color" content="#FAF3E3">
   <meta name="color-scheme" content="light">
 
-  <!-- Favicon: la tríada primaria (amarillo, rojo, azul) unida por un triángulo dorado -->
-  <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Ccircle cx='16' cy='16' r='15' fill='%23B8924A'/%3E%3Ccircle cx='16' cy='16' r='13.4' fill='%23FFFCF5'/%3E%3Cpath d='M16 8.5 22.5 19.75H9.5Z' fill='none' stroke='%23B8924A' stroke-width='1.4'/%3E%3Ccircle cx='16' cy='8.5' r='3.6' fill='%23FFD400'/%3E%3Ccircle cx='22.5' cy='19.75' r='3.6' fill='%23E2231A'/%3E%3Ccircle cx='9.5' cy='19.75' r='3.6' fill='%231D5FD1'/%3E%3C/svg%3E">
+  <!-- Favicon: la tríada primaria unida por un triángulo dorado -->
+  <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Ccircle cx='16' cy='16' r='15' fill='%23B8924A'/%3E%3Ccircle cx='16' cy='16' r='13.6' fill='%23FFFCF5'/%3E%3Cpath d='M16 8.5 22.5 19.75H9.5Z' fill='none' stroke='%23B8924A' stroke-width='1.2'/%3E%3Ccircle cx='16' cy='8.5' r='3.4' fill='%23FFD400'/%3E%3Ccircle cx='22.5' cy='19.75' r='3.4' fill='%23E2231A'/%3E%3Ccircle cx='9.5' cy='19.75' r='3.4' fill='%231D5FD1'/%3E%3C/svg%3E">
 
-  <!-- Tipografías: Cormorant Garamond (títulos y grabados) e Inter (texto) -->
+  <!-- Tipografías: Cormorant Garamond (títulos, grabados y cifras) e Inter (texto) -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,500;0,600;0,700;1,500&family=Inter:wght@400;500;600&display=swap">
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,500;0,600;1,500;1,600&family=Inter:wght@400;500&display=swap">
 
   <link rel="stylesheet" href="css/styles.css">
-  <!-- "defer": el script se ejecuta cuando el HTML ya está listo -->
   <script src="js/app.js" defer></script>
 </head>
 <body>
-  <!-- Interruptor de sonido (trinquete al girar y caja de música al elegir) -->
-  <button class="sonido" id="sonido" type="button" aria-pressed="true" aria-label="Sonido">
-    <svg class="sonido__icono sonido__icono--activo" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
-      <path d="M4 9.5h3.2L12 5.5v13l-4.8-4H4z"/>
-      <path d="M15.5 9a4 4 0 0 1 0 6"/>
-      <path d="M18 6.5a7.5 7.5 0 0 1 0 11"/>
-    </svg>
-    <svg class="sonido__icono sonido__icono--silencio" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
-      <path d="M4 9.5h3.2L12 5.5v13l-4.8-4H4z"/>
-      <path d="M16 10l4 4M20 10l-4 4"/>
-    </svg>
-  </button>
+  <div class="pagina">
 
-  <main class="pagina">
-
-    <!-- ================= Encabezado ================= -->
-    <header class="encabezado">
-      <!-- JS separa el título en letras para la entrada; el texto real se conserva para lectores -->
-      <h1 class="encabezado__titulo" id="titulo">Círculo Cromático</h1>
-
-      <!-- Adorno: dos filetes dorados que nacen de un rombo central -->
-      <svg class="adorno" viewBox="0 0 260 18" aria-hidden="true" focusable="false">
-        <line class="adorno__linea adorno__linea--izquierda" x1="14" y1="9" x2="112" y2="9"/>
-        <line class="adorno__linea adorno__linea--derecha" x1="148" y1="9" x2="246" y2="9"/>
-        <circle class="adorno__perla" cx="8" cy="9" r="1.8"/>
-        <circle class="adorno__perla" cx="252" cy="9" r="1.8"/>
-        <circle class="adorno__perla" cx="119" cy="9" r="1.3"/>
-        <circle class="adorno__perla" cx="141" cy="9" r="1.3"/>
-        <path class="adorno__rombo" d="M130 1.5 137.5 9 130 16.5 122.5 9Z"/>
-        <path class="adorno__rombo-interior" d="M130 5.5 133.5 9 130 12.5 126.5 9Z"/>
+    <!-- ============ Encabezado ============ -->
+    <header class="cabecera">
+      <h1 class="titulo">Círculo Cromático</h1>
+      <!-- Adorno: filete dorado que termina en un rombo -->
+      <svg class="adorno" viewBox="0 0 120 12" aria-hidden="true" focusable="false">
+        <line x1="0" y1="6" x2="104" y2="6"/>
+        <path d="M112 1 117 6 112 11 107 6Z"/>
       </svg>
-
-      <p class="encabezado__subtitulo">Gira la rueda y descubre tu tríada</p>
+      <p class="subtitulo">Gira la rueda y descubre tu tríada</p>
     </header>
 
-    <!-- ================= Rueda cromática ================= -->
-    <section class="escena" id="escena" aria-label="Rueda cromática">
-      <!-- Nombre del color que está bajo el colgante dorado (se actualiza al girar) -->
-      <p class="etiqueta" aria-hidden="true">
-        <span class="etiqueta__punto"></span>
-        <span class="etiqueta__nombre">Amarillo</span>
-        <span class="puntos etiqueta__puntos"></span>
+    <!-- ============ Lectura: qué es la rueda y qué tríada hay elegida ============ -->
+    <div class="lectura">
+      <p class="lectura__intro">
+        Doce colores en el orden del círculo tradicional. Rojo, amarillo y azul son los
+        primarios; naranja, verde y violeta nacen de mezclarlos de dos en dos, y los seis
+        terciarios quedan entre unos y otros.
       </p>
 
-      <div class="rueda-marco" id="rueda-marco">
-        <!-- Luz de color que el plato refleja sobre la encimera (gira con la rueda) -->
-        <div class="rueda__luz" id="rueda-luz" aria-hidden="true">
-          <span></span><span></span><span></span>
-        </div>
-        <!-- Sombra de contacto del plato -->
-        <div class="rueda__sombra" aria-hidden="true"></div>
+      <div class="lectura__triada">
+        <h2 class="lectura__titulo" id="triada-titulo">Tríada primaria</h2>
+        <p class="lectura__colores" id="triada-colores">Amarillo, rojo y azul</p>
+        <p class="lectura__consejo" id="triada-consejo">
+          Tres colores a 120° entre sí. En una cocina funcionan si uno manda y los otros
+          acompañan: amarillo en lo grande, rojo en los textiles y azul en los detalles.
+        </p>
+      </div>
+    </div>
 
+    <!-- ============ La rueda ============ -->
+    <section class="lamina" aria-label="Rueda cromática">
+      <div class="rueda-marco" id="rueda-marco">
         <!--
           La rueda funciona como un "listbox" accesible:
-          - Tab la enfoca; las flechas la giran; Enter o Espacio eligen el color del colgante.
-          - aria-activedescendant apunta al segmento que está bajo el colgante.
+          Tab la enfoca, las flechas la giran y Enter o Espacio eligen el color del colgante.
         -->
         <div class="rueda" id="rueda" role="listbox" tabindex="0"
              aria-label="Rueda cromática de 12 colores"
              aria-describedby="rueda-ayuda">
-          <!-- Plato: anillo de latón cepillado y base de porcelana (no gira) -->
+          <!-- Plato de porcelana con filo dorado (no gira) -->
           <div class="rueda__plato" aria-hidden="true"></div>
-          <!-- Rotor: js/app.js dibuja aquí el SVG con segmentos, grabados y triángulo -->
+          <!-- Rotor: js/app.js dibuja aquí el SVG con los colores, los grabados y el triángulo -->
           <div class="rueda__rotor" id="rueda-rotor"></div>
-          <!-- Brillo del esmalte: fijo, como la luz de la cocina -->
-          <div class="rueda__brillo" aria-hidden="true"></div>
-          <!-- Eje central de latón -->
+          <!-- Tornillo central de latón -->
           <div class="rueda__eje" aria-hidden="true"></div>
-          <!-- Colgante dorado: marca el color activo y oscila al pasar cada segmento -->
-          <svg class="rueda__indicador" id="indicador" viewBox="0 0 24 34" aria-hidden="true" focusable="false">
-            <defs>
-              <linearGradient id="laton-colgante" x1="0" y1="0" x2="1" y2="1">
-                <stop offset="0" stop-color="#F6E7BF"/>
-                <stop offset="0.45" stop-color="#C29B52"/>
-                <stop offset="1" stop-color="#7A5D2B"/>
-              </linearGradient>
-              <radialGradient id="brillo-gema" cx="0.35" cy="0.3" r="0.7">
-                <stop offset="0" stop-color="#FFFFFF" stop-opacity="0.85"/>
-                <stop offset="0.35" stop-color="#FFFFFF" stop-opacity="0.15"/>
-                <stop offset="1" stop-color="#000000" stop-opacity="0.25"/>
-              </radialGradient>
-            </defs>
-            <path d="M12 33 4.3 13.56A8.3 8.3 0 1 1 19.7 13.56Z" fill="url(#laton-colgante)" stroke="#6E5326" stroke-width="0.6"/>
-            <circle cx="12" cy="10.5" r="4.6" fill="#FFFCF5" stroke="#6E5326" stroke-width="0.5"/>
-            <circle class="indicador__gema" id="indicador-gema" cx="12" cy="10.5" r="3.6" fill="#FFD400"/>
-            <circle cx="12" cy="10.5" r="3.6" fill="url(#brillo-gema)"/>
+          <!-- Colgante de latón: marca el color activo y oscila al pasar cada segmento -->
+          <svg class="rueda__colgante" id="colgante" viewBox="0 0 24 34" aria-hidden="true" focusable="false">
+            <path d="M12 33 4.3 13.56A8.3 8.3 0 1 1 19.7 13.56Z" fill="#B8924A" stroke="#6E5326" stroke-width="0.7"/>
+            <circle cx="12" cy="10.5" r="4.4" fill="#FFFCF5" stroke="#6E5326" stroke-width="0.5"/>
+            <circle id="colgante-color" cx="12" cy="10.5" r="3.3" fill="#FFD400"/>
           </svg>
         </div>
       </div>
 
-      <p class="escena__ayuda" id="rueda-ayuda">
-        Arrastra o lanza la rueda para girarla. Toca un color para elegirlo.
-        <span class="escena__ayuda-teclado">Con el teclado: flechas para girar y Enter para elegir.</span>
-      </p>
-      <noscript><p class="escena__ayuda">Activa JavaScript para usar la rueda.</p></noscript>
+      <div class="lamina__pie">
+        <p class="lamina__ayuda" id="rueda-ayuda">
+          Arrastra para girar o toca un color.
+          <span class="lamina__teclado">Con el teclado: flechas para girar y Enter para elegir.</span>
+        </p>
+        <button class="sonido" id="sonido" type="button" aria-pressed="true">
+          <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+            <path d="M4 9.5h3.2L12 5.5v13l-4.8-4H4z"/>
+            <path class="sonido__ondas" d="M15.5 9a4 4 0 0 1 0 6M18 6.5a7.5 7.5 0 0 1 0 11"/>
+            <path class="sonido__cruz" d="M16 10l4 4M20 10l-4 4"/>
+          </svg>
+          <span class="sonido__texto">Con sonido</span>
+        </button>
+      </div>
+      <noscript><p class="lamina__ayuda">Activa JavaScript para usar la rueda.</p></noscript>
     </section>
 
-    <!-- ================= Tríada seleccionada ================= -->
+    <!-- ============ Tarjetas de la tríada ============ -->
     <section class="triada" aria-labelledby="triada-titulo">
-      <h2 class="triada__titulo" id="triada-titulo">Tríada primaria</h2>
-      <p class="triada__descripcion">
-        <span id="triada-colores">Amarillo, rojo y azul</span>: tres colores separados 120° en la rueda.
-        Toca una tarjeta para copiar su código HEX.
-      </p>
-
-      <!-- JS crea aquí las tres tarjetas a partir de la plantilla de abajo -->
-      <div class="triada__tarjetas" id="tarjetas"></div>
-
-      <button class="boton-paleta" id="copiar-paleta" type="button">
-        <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
-          <circle cx="9" cy="9.5" r="5"/><circle cx="15" cy="9.5" r="5"/><circle cx="12" cy="14.5" r="5"/>
-        </svg>
-        <span>Copiar paleta</span>
-      </button>
+      <!-- JS crea aquí las tres tarjetas a partir de la plantilla -->
+      <div class="tarjetas" id="tarjetas"></div>
+      <button class="copiar-todo" id="copiar-paleta" type="button">Copiar los tres códigos</button>
     </section>
-  </main>
 
-  <footer class="pie">
-    <p class="pie__leyenda">
-      <span class="pie__clave"><span class="puntos" data-nivel="1"><i></i></span>Primario</span>
-      <span class="pie__clave"><span class="puntos" data-nivel="2"><i></i><i></i></span>Secundario</span>
-      <span class="pie__clave"><span class="puntos" data-nivel="3"><i></i><i></i><i></i></span>Terciario</span>
-    </p>
-    <p>Círculo cromático tradicional RYB</p>
-  </footer>
+    <footer class="pie">
+      <p>Círculo cromático tradicional (RYB). En pantalla los colores son orientativos: antes de pintar, pide una muestra real.</p>
+    </footer>
+  </div>
 
-  <!-- Plantilla de tarjeta de la tríada (porcelana con muestra de esmalte) -->
+  <!-- Plantilla de tarjeta -->
   <template id="plantilla-tarjeta">
     <button class="tarjeta" type="button">
-      <span class="tarjeta__cabecera">
-        <span class="tarjeta__muestra"><span class="tarjeta__tinta"></span></span>
-        <span class="tarjeta__posicion"></span>
-      </span>
-      <span class="tarjeta__datos">
+      <span class="tarjeta__muestra"></span>
+      <span class="tarjeta__texto">
         <span class="tarjeta__nombre"></span>
-        <span class="tarjeta__categoria"><span class="puntos"></span><span class="tarjeta__categoria-texto"></span></span>
-        <span class="tarjeta__hex"></span>
-        <span class="tarjeta__rgb"></span>
+        <span class="tarjeta__categoria"></span>
+        <span class="tarjeta__codigos">
+          <span class="tarjeta__hex"></span>
+          <span class="tarjeta__rgb"></span>
+        </span>
       </span>
-      <span class="tarjeta__accion">
-        <svg class="tarjeta__icono tarjeta__icono--copiar" viewBox="0 0 16 16" aria-hidden="true" focusable="false"><rect x="5.5" y="5.5" width="8" height="8" rx="1.5"/><path d="M10.5 3.5V3A1.5 1.5 0 0 0 9 1.5H4A1.5 1.5 0 0 0 2.5 3v5A1.5 1.5 0 0 0 4 9.5h.5"/></svg>
-        <svg class="tarjeta__icono tarjeta__icono--hecho" viewBox="0 0 16 16" aria-hidden="true" focusable="false"><path d="M3 8.5l3 3 7-7"/></svg>
-        <span class="tarjeta__accion-texto">Copiar HEX</span>
-      </span>
+      <span class="tarjeta__grados"></span>
+      <span class="tarjeta__accion">Copiar</span>
     </button>
   </template>
 

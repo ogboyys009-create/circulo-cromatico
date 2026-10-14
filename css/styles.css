@@ -1,50 +1,39 @@
 /* ==========================================================================
    Círculo Cromático — hoja de estilos
-   Tema claro inspirado en una cocina clásica de lujo: marfil y lino de fondo,
-   latón cepillado en los detalles, café en el texto y la rueda como un plato
-   de porcelana esmaltada con filetes de oro sobre una bandeja giratoria.
+
+   Idea: una lámina de un tratado de color sobre papel de lino, y en ella un
+   plato de porcelana pintado a mano con filo dorado. El plato es la única
+   pieza llamativa; todo lo demás es papel, tipografía y filetes finos.
    ========================================================================== */
 
 /* --------------------------------------------------------------------------
-   1. Tokens de diseño
+   1. Tokens
    -------------------------------------------------------------------------- */
 :root {
-  /* Paleta base */
-  --marfil: #FAF3E3;           /* fondo principal */
-  --lino: #F0E4CC;             /* final del degradado de fondo */
-  --hueso: #FFFCF5;            /* tarjetas y botones */
-  --porcelana: #FFFDF8;
-  --laton: #B8924A;            /* filetes, bordes y adornos */
-  --laton-claro: #EBD6A4;
-  --laton-sombra: #7E6230;
+  --marfil: #FAF3E3;           /* papel */
+  --lino: #F0E4CC;             /* final del degradado del papel */
+  --hueso: #FFFCF5;            /* tarjetas */
+  --porcelana: #FFFDF8;        /* plato */
+  --laton: #B8924A;            /* filetes y bordes */
+  --laton-oscuro: #6E5326;
   --laton-texto: #7D5F27;      /* latón oscurecido: contraste AA como texto y foco */
   --espresso: #3B2A20;         /* texto principal */
-  --cafe-leche: #8A7260;       /* detalles y texto grande */
-  --cafe-leche-texto: #725D4D; /* café con leche algo más oscuro para texto pequeño (AA) */
-  --salvia: #9CAF88;           /* toque decorativo: confirmación de copiado */
-  --salvia-texto: #56694A;
+  --cafe-leche: #8A7260;       /* texto grande secundario */
+  --cafe-leche-texto: #725D4D; /* texto pequeño secundario (AA sobre marfil y lino) */
+  --salvia-texto: #56694A;     /* confirmación de copiado */
 
-  /* Tipografía */
-  --fuente-titulos: "Cormorant Garamond", "Playfair Display", Georgia, "Times New Roman", serif;
-  --fuente-texto: "Inter", "Lato", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --serif: "Cormorant Garamond", "Playfair Display", Georgia, "Times New Roman", serif;
+  --sans: "Inter", "Lato", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
 
-  /* Movimiento: 300-500 ms con curvas suaves; "rebote" para lo que se eleva */
-  --suave: cubic-bezier(.22, .8, .24, 1);
-  --rebote: cubic-bezier(.34, 1.5, .64, 1);
+  --suave: cubic-bezier(.2, .8, .2, 1);
   --duracion: 450ms;
 
-  /* Tamaño de la rueda: cabe en móvil, tableta y escritorio (y en pantallas bajas) */
-  --rueda: min(86vw, 500px, max(290px, 64vh));
-
-  /* Sombra "porcelana" compartida por tarjetas, etiqueta y botones */
-  --sombra-porcelana:
-    inset 0 1px 0 rgba(255, 255, 255, .95),
-    0 18px 32px -22px rgba(59, 42, 32, .5),
-    0 3px 8px -4px rgba(59, 42, 32, .18);
+  /* Tamaño de la rueda (se redefine en escritorio) */
+  --rueda: min(88vw, 520px);
 }
 
 /* --------------------------------------------------------------------------
-   2. Base
+   2. Base y papel
    -------------------------------------------------------------------------- */
 *,
 *::before,
@@ -60,54 +49,33 @@ html {
 
 body {
   margin: 0;
-  min-height: 100vh;
-  min-height: 100svh;
-  display: flex;
-  flex-direction: column;
-  font-family: var(--fuente-texto);
+  font-family: var(--sans);
   font-size: 1rem;
-  line-height: 1.55;
+  line-height: 1.6;
   -webkit-font-smoothing: antialiased;
   overflow-x: hidden;
-  /* contexto de apilado propio para que el fondo (z-index: -1) quede detrás */
   position: relative;
   isolation: isolate;
 }
 
-/* Fondo: degradado marfil → lino + textura de lino (ruido SVG en dos direcciones) */
+/* Papel: marfil que baja a lino a lo largo de toda la página, con trama de lino casi imperceptible */
+body {
+  min-height: 100vh;
+}
+
 body::before {
   content: "";
-  position: fixed;
+  position: absolute;
   inset: 0;
-  z-index: -2;
+  z-index: -1;
   pointer-events: none;
   background-color: var(--marfil);
   background-image:
-    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='220' height='220'%3E%3Cfilter id='h'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.012 0.9' numOctaves='2' seed='4' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 0.42 0 0 0 0 0.33 0 0 0 0 0.22 0 0 0 0.1 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23h)'/%3E%3C/svg%3E"),
-    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='220' height='220'%3E%3Cfilter id='v'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9 0.012' numOctaves='2' seed='9' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 0.42 0 0 0 0 0.33 0 0 0 0 0.22 0 0 0 0.08 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23v)'/%3E%3C/svg%3E"),
-    radial-gradient(ellipse 120% 90% at 50% 40%, rgba(255, 253, 246, 0) 55%, rgba(150, 115, 70, .12) 100%),
-    linear-gradient(180deg, var(--marfil) 0%, var(--marfil) 30%, var(--lino) 100%);
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='240' height='240'%3E%3Cfilter id='h'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.01 0.95' numOctaves='2' seed='4' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 0.4 0 0 0 0 0.31 0 0 0 0 0.2 0 0 0 0.11 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23h)'/%3E%3C/svg%3E"),
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='240' height='240'%3E%3Cfilter id='v'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.95 0.01' numOctaves='2' seed='9' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 0.4 0 0 0 0 0.31 0 0 0 0 0.2 0 0 0 0.09 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23v)'/%3E%3C/svg%3E"),
+    linear-gradient(180deg, var(--marfil) 0%, var(--marfil) 40%, var(--lino) 100%);
 }
 
-/* Luz de ventana: paños de luz cálida que entran en diagonal, muy difuminados */
-body::after {
-  content: "";
-  position: fixed;
-  z-index: -1;
-  top: -18vh;
-  left: -14vw;
-  width: min(1100px, 95vw);
-  height: 115vh;
-  pointer-events: none;
-  opacity: .6;
-  transform: skewX(-18deg) rotate(-6deg);
-  transform-origin: top left;
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 400 520'%3E%3Cfilter id='b' x='-20%25' y='-20%25' width='140%25' height='140%25'%3E%3CfeGaussianBlur stdDeviation='16'/%3E%3C/filter%3E%3Cg filter='url(%23b)' fill='%23FFFDF6'%3E%3Crect x='40' y='30' width='150' height='140' rx='6'/%3E%3Crect x='206' y='30' width='150' height='140' rx='6'/%3E%3Crect x='40' y='186' width='150' height='140' rx='6'/%3E%3Crect x='206' y='186' width='150' height='140' rx='6'/%3E%3Crect x='40' y='342' width='150' height='140' rx='6'/%3E%3Crect x='206' y='342' width='150' height='140' rx='6'/%3E%3C/g%3E%3C/svg%3E");
-  background-repeat: no-repeat;
-  background-size: contain;
-}
-
-/* Texto solo para lectores de pantalla */
 .solo-lector {
   position: absolute;
   width: 1px;
@@ -120,312 +88,193 @@ body::after {
   border: 0;
 }
 
-/* Marcadores de categoría: 1, 2 o 3 perlas doradas (primario, secundario, terciario) */
-.puntos {
-  display: inline-flex;
-  align-items: center;
-  gap: 3px;
-}
-
-.puntos i {
-  width: 5px;
-  height: 5px;
-  border-radius: 50%;
-  background: var(--laton);
-  box-shadow: inset 0 -1px 1px rgba(80, 55, 20, .35);
-}
-
-/* --------------------------------------------------------------------------
-   3. Botón de sonido
-   -------------------------------------------------------------------------- */
-.sonido {
-  position: absolute;
-  top: max(1rem, env(safe-area-inset-top));
-  right: 1rem;
-  z-index: 5;
-  display: grid;
-  place-items: center;
-  width: 2.75rem;
-  height: 2.75rem;
-  padding: 0;
-  color: var(--laton-texto);
-  background: var(--hueso);
-  border: 1px solid rgba(184, 146, 74, .7);
-  border-radius: 50%;
-  box-shadow: var(--sombra-porcelana);
-  cursor: pointer;
-  transition: transform 300ms var(--suave), border-color 300ms var(--suave);
-  animation: aparecer 800ms var(--suave) 1.6s backwards;
-}
-
-.sonido:hover {
-  border-color: var(--laton);
-  transform: translateY(-1px);
-}
-
-.sonido:focus {
+:focus {
   outline: none;
 }
 
-.sonido:focus-visible {
+:focus-visible {
   outline: 2px solid var(--laton-texto);
   outline-offset: 3px;
 }
 
-.sonido__icono {
-  width: 1.25rem;
-  height: 1.25rem;
-  fill: none;
-  stroke: currentColor;
-  stroke-width: 1.5;
-  stroke-linecap: round;
-  stroke-linejoin: round;
-}
-
-.sonido[aria-pressed="true"] .sonido__icono--silencio,
-.sonido[aria-pressed="false"] .sonido__icono--activo {
-  display: none;
-}
-
 /* --------------------------------------------------------------------------
-   4. Estructura de la página y encabezado
+   3. Composición
+   Móvil: una columna. Escritorio: texto a la izquierda, plato a la derecha
+   ocupando dos filas, y las tarjetas debajo a todo el ancho.
    -------------------------------------------------------------------------- */
 .pagina {
-  flex: 1;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  grid-template-areas:
+    "cabecera"
+    "lamina"
+    "lectura"
+    "triada"
+    "pie";
   width: 100%;
-  max-width: 66rem;
+  max-width: 76rem;
   margin: 0 auto;
-  /* arriba deja sitio al botón de sonido en pantallas estrechas */
-  padding: clamp(4.5rem, 9vw, 5rem) 1rem 3rem;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
+  padding: clamp(2.5rem, 7vw, 4.5rem) 1rem 2rem;
 }
 
-.encabezado {
-  text-align: center;
-}
+.cabecera { grid-area: cabecera; }
+.lamina   { grid-area: lamina; }
+.lectura  { grid-area: lectura; }
+.triada   { grid-area: triada; }
+.pie      { grid-area: pie; }
 
-.encabezado__titulo {
-  margin: 0;
-  font-family: var(--fuente-titulos);
-  font-weight: 600;
-  font-size: clamp(3rem, 1.6rem + 6vw, 5.5rem);
-  line-height: .95;
-  letter-spacing: -.012em;
-  color: var(--espresso);
-  text-shadow: 0 1px 0 rgba(255, 255, 255, .8);
-}
+@media (min-width: 980px) {
+  :root {
+    --rueda: min(600px, 50vw, 80vh);
+  }
 
-/* Letras del título (creadas por JS) que entran una a una */
-.titulo__palabra {
-  display: inline-block;
-  white-space: nowrap;
-}
-
-.titulo__letra {
-  display: inline-block;
-  animation: letra-entra 1000ms var(--suave) backwards;
-  animation-delay: calc(120ms + var(--i) * 38ms);
-}
-
-@keyframes letra-entra {
-  from {
-    opacity: 0;
-    transform: translateY(.3em) rotate(4deg);
-    filter: blur(8px);
+  .pagina {
+    grid-template-columns: minmax(0, 5fr) minmax(0, 7fr);
+    grid-template-rows: auto 1fr auto auto;
+    grid-template-areas:
+      "cabecera lamina"
+      "lectura  lamina"
+      "triada   triada"
+      "pie      pie";
+    column-gap: clamp(2.5rem, 5vw, 5rem);
+    padding: 4.5rem 2rem 2.5rem;
   }
 }
 
-/* Adorno: filetes que nacen del rombo */
+/* --------------------------------------------------------------------------
+   4. Encabezado
+   -------------------------------------------------------------------------- */
+.titulo {
+  margin: 0;
+  font-family: var(--serif);
+  font-weight: 600;
+  font-size: clamp(3.1rem, 1.6rem + 6.4vw, 6rem);
+  line-height: .9;
+  letter-spacing: -.02em;
+  color: var(--espresso);
+}
+
 .adorno {
   display: block;
-  width: clamp(12rem, 40vw, 16.25rem);
+  width: 7.5rem;
   height: auto;
-  margin: 1.15rem auto 1rem;
+  margin: 1.4rem 0 1.1rem;
   overflow: visible;
 }
 
-.adorno__linea {
+.adorno line {
   stroke: var(--laton);
   stroke-width: 1;
-  transform-box: fill-box;
-  animation: filete-entra 1100ms var(--suave) 650ms backwards;
 }
 
-.adorno__linea--izquierda {
-  transform-origin: right center;
-}
-
-.adorno__linea--derecha {
-  transform-origin: left center;
-}
-
-@keyframes filete-entra {
-  from {
-    transform: scaleX(0);
-  }
-}
-
-.adorno__perla {
+.adorno path {
   fill: var(--laton);
-  animation: aparecer 700ms var(--suave) 1.2s backwards;
 }
 
-.adorno__rombo {
-  fill: var(--laton);
-  transform-box: fill-box;
-  transform-origin: center;
-  animation: rombo-entra 900ms var(--rebote) 450ms backwards;
-}
-
-.adorno__rombo-interior {
-  fill: var(--marfil);
-}
-
-@keyframes rombo-entra {
-  from {
-    opacity: 0;
-    transform: rotate(-90deg) scale(.2);
-  }
-}
-
-@keyframes aparecer {
-  from {
-    opacity: 0;
-  }
-}
-
-@keyframes subir {
-  from {
-    opacity: 0;
-    transform: translateY(14px);
-  }
-}
-
-.encabezado__subtitulo {
+.subtitulo {
   margin: 0;
-  font-size: clamp(1.0625rem, .95rem + .5vw, 1.25rem);
-  color: var(--cafe-leche-texto);
-  letter-spacing: .01em;
-  animation: subir 900ms var(--suave) 800ms backwards;
+  max-width: 22ch;
+  font-family: var(--serif);
+  font-style: italic;
+  font-weight: 500;
+  font-size: clamp(1.45rem, 1.2rem + .9vw, 1.85rem);
+  line-height: 1.2;
+  color: var(--cafe-leche);
 }
 
 /* --------------------------------------------------------------------------
-   5. Escena de la rueda
+   5. Lectura (texto de la lámina)
    -------------------------------------------------------------------------- */
-.escena {
+.lectura {
+  max-width: 36rem;
+  margin-top: 2.5rem;
+}
+
+.lectura__intro {
+  margin: 0;
+  font-size: 1rem;
+  color: var(--cafe-leche-texto);
+}
+
+.lectura__triada {
+  margin-top: 2rem;
+  padding-top: 1.6rem;
+  border-top: 1px solid rgba(184, 146, 74, .45);
+}
+
+.lectura__titulo {
+  margin: 0;
+  font-family: var(--serif);
+  font-weight: 600;
+  font-size: clamp(2.1rem, 1.6rem + 1.6vw, 2.75rem);
+  line-height: 1;
+  letter-spacing: -.01em;
+}
+
+.lectura__colores {
+  margin: .45rem 0 0;
+  font-family: var(--serif);
+  font-style: italic;
+  font-size: 1.5rem;
+  line-height: 1.25;
+  color: var(--laton-texto);
+}
+
+.lectura__consejo {
+  margin: 1rem 0 0;
+  color: var(--espresso);
+}
+
+/* Al cambiar de tríada el texto se renueva con un fundido breve */
+.lectura__triada.renovando > * {
+  animation: renovar 420ms var(--suave);
+}
+
+@keyframes renovar {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+}
+
+@media (min-width: 980px) {
+  .lectura {
+    align-self: end;
+    margin-top: 3rem;
+  }
+}
+
+/* --------------------------------------------------------------------------
+   6. La lámina con el plato
+   -------------------------------------------------------------------------- */
+.lamina {
   display: flex;
   flex-direction: column;
   align-items: center;
-  margin-top: clamp(2rem, 5vw, 2.75rem);
+  /* el colgante sobresale por arriba del plato */
+  padding-top: calc(var(--rueda) * .07);
+  margin-top: 2.25rem;
 }
 
-/* Etiqueta con el color que está bajo el colgante */
-.etiqueta {
-  position: relative;
-  z-index: 2;              /* por encima del resplandor de color */
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: .6rem;
-  min-width: 12.5rem;
-  /* deja sitio para el colgante, que sobresale por encima de la rueda */
-  margin: 0 0 calc(var(--rueda) * .085 + .4rem);
-  padding: .45rem 1.05rem .45rem .6rem;
-  background: var(--hueso);
-  border: 1px solid rgba(184, 146, 74, .75);
-  border-radius: 999px;
-  font-size: .9375rem;
-  font-weight: 500;
-  color: var(--espresso);
-  box-shadow: var(--sombra-porcelana);
-  animation: subir 800ms var(--suave) 1.4s backwards;
+@media (min-width: 980px) {
+  .lamina {
+    margin-top: 0;
+    justify-self: end;
+  }
 }
 
-.etiqueta__punto {
-  width: .9rem;
-  height: .9rem;
-  border-radius: 50%;
-  background-color: #FFD400;
-  box-shadow: 0 0 0 2px var(--hueso), 0 0 0 3px var(--laton);
-  transition: background-color 250ms var(--suave);
-}
-
-.etiqueta__puntos {
-  margin-left: .1rem;
-}
-
-/* Marco: da perspectiva a la inclinación 3D y entra con el plato */
 .rueda-marco {
   position: relative;
   width: var(--rueda);
   height: var(--rueda);
-  perspective: 1400px;
-  animation: plato-entra 1200ms var(--suave) 300ms backwards;
 }
 
-@keyframes plato-entra {
-  from {
-    opacity: 0;
-    transform: translateY(34px) scale(.94);
-  }
-}
-
-/* Luz de color reflejada en la encimera: tres manchas difusas con los colores de la tríada */
-.rueda__luz {
-  position: absolute;
-  inset: 0;
-  pointer-events: none;
-  opacity: 0;
-  will-change: transform;
-  transition: opacity 900ms var(--suave);
-}
-
-.escena.con-seleccion .rueda__luz {
-  opacity: 1;
-}
-
-.rueda__luz span {
-  position: absolute;
-  left: 50%;
-  top: 50%;
-  width: 46%;
-  height: 46%;
-  margin: -23% 0 0 -23%;
-  border-radius: 50%;
-  background-color: var(--c, #FFD400);
-  opacity: .42;
-  filter: blur(calc(var(--rueda) * .075));
-  transform: rotate(var(--a, 0deg)) translateY(calc(var(--rueda) * -.39));
-  transition:
-    background-color 600ms var(--suave),
-    transform 560ms var(--suave);
-}
-
-/* Sombra de contacto: se desplaza un poco con la inclinación */
-.rueda__sombra {
-  position: absolute;
-  left: 8%;
-  right: 8%;
-  bottom: -6%;
-  height: 18%;
-  border-radius: 50%;
-  background: radial-gradient(closest-side, rgba(59, 42, 32, .32), rgba(59, 42, 32, 0));
-  filter: blur(8px);
-  pointer-events: none;
-  transform: translate(calc(var(--ix, 0) * -10px), calc(var(--iy, 0) * 6px));
-}
-
-/* La rueda: se inclina en 3D hacia el puntero (variables --rx/--ry desde JS) */
 .rueda {
   position: absolute;
   inset: 0;
   border-radius: 50%;
   cursor: grab;
-  transform: rotateX(var(--rx, 0deg)) rotateY(var(--ry, 0deg));
-  /* el gesto de arrastre gira la rueda en lugar de desplazar la página */
-  touch-action: none;
+  touch-action: none;          /* el arrastre gira la rueda en vez de desplazar la página */
   user-select: none;
   -webkit-user-select: none;
   -webkit-touch-callout: none;
@@ -437,51 +286,33 @@ body::after {
   cursor: grabbing !important;
 }
 
-.rueda:focus {
-  outline: none;
-}
-
 .rueda:focus-visible {
-  outline: 2px solid var(--laton-texto);
-  outline-offset: 10px;
+  outline-offset: 12px;
 }
 
-.rueda__plato,
-.rueda__rotor,
-.rueda__brillo {
+/* Plato: filo dorado fino y porcelana con un leve hundimiento hacia el centro */
+.rueda__plato {
   position: absolute;
   inset: 0;
   border-radius: 50%;
-}
-
-/* Plato: anillo exterior de latón pulido y cepillado */
-.rueda__plato {
-  background:
-    repeating-radial-gradient(circle at 50% 50%, rgba(255, 255, 255, .08) 0 1px, rgba(60, 40, 10, .05) 1px 2px),
-    conic-gradient(from 200deg,
-      #9C7A3C, #F2E1B5 9%, #B8924A 20%, #7A5D2B 33%, #C9A764 46%,
-      #F6E7BF 57%, #A8843F 69%, #DABD7C 83%, #9C7A3C);
+  background: linear-gradient(140deg, #CDAB66, #A9853F 45%, #C6A35D 70%, #9C7A3C);
   box-shadow:
-    0 0 0 1px rgba(110, 83, 38, .6),
-    0 2px 0 1px rgba(255, 255, 255, .5),
-    0 36px 50px -26px rgba(59, 42, 32, .55),
-    0 16px 26px -14px rgba(59, 42, 32, .3);
+    0 1px 1px rgba(59, 42, 32, .25),
+    0 24px 40px -26px rgba(59, 42, 32, .55),
+    0 50px 70px -50px rgba(59, 42, 32, .35);
 }
 
-/* Base de porcelana bajo los grabados y los colores */
 .rueda__plato::before {
   content: "";
   position: absolute;
-  inset: 1.6%;
+  inset: 1.1%;
   border-radius: 50%;
-  background: radial-gradient(circle, #FFFEFA 70%, #FBF5E8 93%, #EFE3CB 100%);
-  box-shadow:
-    inset 0 0 0 1px rgba(110, 83, 38, .5),
-    inset 0 3px 6px rgba(59, 42, 32, .2);
+  background: radial-gradient(circle, var(--porcelana) 0 80%, #F6EEDD 97%, #EFE3CB 100%);
 }
 
-/* Rotor: solo esta capa gira (transform en GPU, sin repintar el resto) */
 .rueda__rotor {
+  position: absolute;
+  inset: 0;
   will-change: transform;
 }
 
@@ -492,102 +323,115 @@ body::after {
   overflow: visible;
 }
 
-/* Brillo del esmalte: fijo como la luz de la cocina; se desliza un poco con la inclinación */
-.rueda__brillo {
-  inset: 1.6%;
-  pointer-events: none;
-  background:
-    radial-gradient(ellipse 46% 30% at calc(32% + var(--ix, 0) * -6%) calc(20% + var(--iy, 0) * -6%), rgba(255, 255, 255, .5), rgba(255, 255, 255, 0) 72%),
-    radial-gradient(circle at calc(44% + var(--ix, 0) * -3%) calc(40% + var(--iy, 0) * -3%), rgba(255, 255, 255, .5), rgba(255, 255, 255, 0) 16%),
-    linear-gradient(125deg, rgba(255, 255, 255, 0) 58%, rgba(255, 255, 255, .16) 63%, rgba(255, 255, 255, 0) 70%),
-    radial-gradient(ellipse 70% 60% at 74% 86%, rgba(59, 42, 32, .08), rgba(59, 42, 32, 0) 70%);
-}
-
-/* Eje central de latón con arandela */
+/* Tornillo central */
 .rueda__eje {
   position: absolute;
   left: 50%;
   top: 50%;
-  width: 5.4%;
+  width: 3.6%;
   aspect-ratio: 1;
   border-radius: 50%;
   transform: translate(-50%, -50%);
-  background:
-    radial-gradient(circle at 36% 30%, #FFF4D6 0 12%, rgba(255, 244, 214, 0) 30%),
-    radial-gradient(circle, #C9A55E 0 42%, #7A5D2B 44%, #E9D3A0 50%, #B8924A 72%, #7A5D2B 100%);
-  box-shadow: 0 2px 4px rgba(59, 42, 32, .4), 0 0 0 1px rgba(110, 83, 38, .45);
+  background: radial-gradient(circle at 40% 35%, #D9BD80, #A9853F 60%, #7E6230);
+  box-shadow: 0 1px 2px rgba(59, 42, 32, .35);
   pointer-events: none;
 }
 
-/* Colgante dorado: su punta toca el borde de los grabados; oscila desde la perla */
-.rueda__indicador {
+.rueda__eje::after {
+  content: "";
   position: absolute;
-  left: 46.25%;
-  top: -7.6%;
-  width: 7.5%;
+  left: 22%;
+  right: 22%;
+  top: 50%;
+  height: 1px;
+  background: rgba(70, 50, 20, .55);
+  transform: rotate(-35deg);
+}
+
+/* Colgante: su punta toca los grabados; oscila desde la perla */
+.rueda__colgante {
+  position: absolute;
+  left: 46.6%;
+  top: -7%;
+  width: 6.8%;
   height: auto;
   transform-origin: 50% 30.9%;
-  filter: drop-shadow(0 3px 3px rgba(59, 42, 32, .35));
+  filter: drop-shadow(0 2px 2px rgba(59, 42, 32, .3));
   pointer-events: none;
   overflow: visible;
 }
 
-.indicador__gema {
-  transition: fill 250ms var(--suave);
+#colgante-color {
+  transition: fill 200ms linear;
 }
 
-.escena__ayuda {
-  max-width: 34rem;
-  margin: clamp(2rem, 5vw, 2.6rem) 0 0;
-  text-align: center;
+.lamina__pie {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: center;
+  gap: .5rem 1.5rem;
+  max-width: var(--rueda);
+  margin-top: 2rem;
   font-size: .875rem;
   color: var(--cafe-leche-texto);
-  animation: aparecer 900ms var(--suave) 2.2s backwards;
+  text-align: center;
 }
 
-.escena__ayuda-teclado {
+.lamina__ayuda {
+  margin: 0;
+}
+
+.lamina__teclado {
   display: block;
 }
 
-/* En pantallas táctiles no hace falta la ayuda de teclado */
 @media (hover: none) and (pointer: coarse) {
-  .escena__ayuda-teclado {
+  .lamina__teclado {
     display: none;
   }
 }
 
+/* Interruptor de sonido: un botón de texto, discreto */
+.sonido {
+  display: inline-flex;
+  align-items: center;
+  gap: .4rem;
+  padding: .25rem 0;
+  font: inherit;
+  color: var(--laton-texto);
+  background: none;
+  border: 0;
+  border-bottom: 1px solid rgba(184, 146, 74, .5);
+  cursor: pointer;
+}
+
+.sonido svg {
+  width: 1.05rem;
+  height: 1.05rem;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.5;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.sonido[aria-pressed="true"] .sonido__cruz,
+.sonido[aria-pressed="false"] .sonido__ondas {
+  display: none;
+}
+
 /* --------------------------------------------------------------------------
-   6. Elementos del SVG de la rueda (creados por js/app.js)
+   7. Elementos del SVG del plato (creados por js/app.js)
    -------------------------------------------------------------------------- */
-
-/* Entrada: los segmentos se "pintan" uno a uno en sentido horario */
-.pieza {
-  transform-box: view-box;
-  transform-origin: 0 0;
-  animation: pieza-entra 700ms var(--suave) backwards;
-  animation-delay: calc(650ms + var(--i) * 60ms);
-}
-
-@keyframes pieza-entra {
-  from {
-    opacity: 0;
-    transform: scale(.86);
-  }
-}
-
-.grabados {
-  animation: aparecer 1000ms var(--suave) 1.3s backwards;
-}
-
-/* Segmentos de esmalte */
 .segmento {
   cursor: pointer;
   transition: opacity var(--duracion) var(--suave);
 }
 
-/* Con una tríada elegida, el resto de la rueda se atenúa un poco */
+/* Con una tríada elegida, el resto se atenúa un poco */
 .con-seleccion .segmento:not(.en-triada) {
-  opacity: .68;
+  opacity: .7;
 }
 
 @media (hover: hover) {
@@ -596,62 +440,20 @@ body::after {
   }
 }
 
-.esmalte,
-.alambres,
+.grano,
+.filetes,
 .grabados,
 .centro,
-.onda,
 .fantasma,
 .triangulo,
 .realces {
   pointer-events: none;
 }
 
-/* Filetes de oro entre los esmaltes (cloisonné) */
-.alambre {
-  fill: none;
-  stroke: #9C7A3C;
-  stroke-width: 1.9;
-  stroke-linecap: round;
-}
-
-.alambre--luz {
-  stroke: #F2E1B5;
-  stroke-width: .6;
-}
-
-/* Grabados del borde de porcelana: nombres y perlas de categoría */
-.rotulo {
-  font-family: var(--fuente-titulos);
-  font-size: 11px;
-  font-weight: 600;
-  letter-spacing: .03em;
-  fill: var(--espresso);
-  transition: opacity var(--duracion) var(--suave), fill var(--duracion) var(--suave);
-}
-
-.perla-categoria {
-  fill: var(--laton);
-  transition: opacity var(--duracion) var(--suave);
-}
-
-.con-seleccion .rotulo:not(.en-triada),
-.con-seleccion .perla-categoria:not(.en-triada) {
-  opacity: .45;
-}
-
-.rotulo.en-triada {
-  fill: var(--laton-texto);
-  font-weight: 700;
-}
-
-.graduacion {
-  stroke: var(--laton);
-  stroke-width: .55;
-}
-
-.graduacion--larga {
-  stroke-width: 1;
+/* Grano del esmalte pintado a mano */
+.grano {
+  mix-blend-mode: multiply;
+  opacity: .38;
 }
 
 .filete {
@@ -659,85 +461,91 @@ body::after {
   stroke: var(--laton);
 }
 
-/* Copias elevadas de la tríada: borde de oro, escala con rebote y sombra suave */
+.rotulo {
+  font-family: var(--serif);
+  font-style: italic;
+  font-weight: 500;
+  font-size: 12.5px;
+  letter-spacing: .01em;
+  fill: var(--espresso);
+  transition: opacity var(--duracion) var(--suave), fill var(--duracion) var(--suave);
+}
+
+.con-seleccion .rotulo:not(.en-triada) {
+  opacity: .55;
+}
+
+.rotulo.en-triada {
+  font-weight: 600;
+  fill: var(--laton-oscuro);
+}
+
+.marca {
+  stroke: var(--laton);
+  stroke-width: .5;
+}
+
+.marca--larga {
+  stroke-width: .9;
+}
+
+/* Copias elevadas de la tríada: borde dorado, algo más grandes y con sombra */
 .realce {
   opacity: 0;
   transform: scale(1);
   transform-box: view-box;   /* el origen (centroide del segmento) lo fija JS */
   transition:
-    opacity 380ms var(--suave),
-    transform 520ms var(--rebote);
+    opacity 360ms var(--suave),
+    transform var(--duracion) var(--suave);
 }
 
 .realce.activo {
   opacity: 1;
-  transform: scale(1.065);
+  transform: scale(1.055);
 }
 
 .realce.activo.principal {
-  transform: scale(1.095);
+  transform: scale(1.08);
 }
 
 .realce__borde {
   fill: none;
-  stroke: #C9A55E;
-  stroke-width: 2.6;
-  stroke-linejoin: round;
-}
-
-.realce__bisel {
-  fill: none;
-  stroke: rgba(255, 248, 225, .85);
-  stroke-width: .7;
-  stroke-linejoin: round;
-}
-
-/* Disco central color crema */
-.centro__disco {
-  fill: url(#degradado-centro);
-}
-
-.centro__perla {
-  fill: var(--laton);
-}
-
-/* Onda dorada que recorre la rueda al elegir */
-.onda {
-  fill: none;
   stroke: var(--laton);
-  stroke-width: 1.4;
-  opacity: 0;
-  transform-box: view-box;
-  transform-origin: 0 0;
+  stroke-width: 2.2;
+  stroke-linejoin: round;
 }
 
-/* Triángulo fantasma: anticipa la tríada del color bajo el ratón */
+.centro__disco {
+  fill: #FBF5E8;
+}
+
+/* Triángulo punteado: anticipa la tríada del color bajo el ratón o el colgante */
 .fantasma {
   opacity: 0;
   transform-box: view-box;
   transform-origin: 0 0;
-  transition: opacity 260ms var(--suave), transform 420ms var(--suave);
+  transition: opacity 240ms var(--suave), transform 380ms var(--suave);
 }
 
 .fantasma.visible {
-  opacity: .7;
+  opacity: .8;
 }
 
 .fantasma path {
   fill: none;
-  stroke: var(--laton-texto);
-  stroke-width: 1;
-  stroke-dasharray: 3 4;
+  stroke: var(--cafe-leche);
+  stroke-width: .9;
+  stroke-dasharray: 2.5 3.5;
   stroke-linejoin: round;
 }
 
-/* Triángulo dorado de la tríada, con veladura de sus tres colores */
+/* Triángulo dorado de la tríada */
 .triangulo {
   opacity: 0;
   transform-box: view-box;
-  transform-origin: 0 0;     /* (0,0) es el centro del viewBox */
+  transform-origin: 0 0;       /* (0,0) es el centro del viewBox */
   transition:
-    transform 560ms var(--suave),
+    transform 520ms var(--suave),
     opacity 400ms var(--suave);
 }
 
@@ -748,350 +556,193 @@ body::after {
 .triangulo__trazo {
   fill: none;
   stroke: var(--laton);
-  stroke-width: 1.4;
+  stroke-width: 1.2;
   stroke-linejoin: round;
   stroke-dasharray: 1;
 }
 
-.triangulo__veladura stop {
-  transition: stop-color 500ms var(--suave);
-}
-
-.joya {
-  transform-box: fill-box;
-  transform-origin: center;
-}
-
-.joya__color {
-  transition: fill 450ms var(--suave);
+.triangulo__vertice {
+  stroke: var(--laton);
+  stroke-width: 1.4;
+  transition: fill 400ms var(--suave);
 }
 
 /* --------------------------------------------------------------------------
-   7. Tríada y tarjetas
+   8. Tarjetas de la tríada
+   La del color elegido es mayor; las otras dos, compañeras, más pequeñas.
    -------------------------------------------------------------------------- */
 .triada {
-  width: 100%;
-  margin-top: clamp(2.75rem, 7vw, 4rem);
-  text-align: center;
+  margin-top: clamp(2.5rem, 6vw, 4rem);
 }
 
-.triada__titulo {
-  margin: 0;
-  font-family: var(--fuente-titulos);
-  font-weight: 600;
-  font-size: clamp(2rem, 1.4rem + 2vw, 2.75rem);
-  line-height: 1.05;
-  color: var(--espresso);
-}
-
-.triada__descripcion {
-  max-width: 34rem;
-  margin: .65rem auto 0;
-  color: var(--cafe-leche-texto);
-}
-
-.triada__tarjetas {
+.tarjetas {
   display: grid;
-  grid-template-columns: 1fr;
-  gap: 1rem;
-  max-width: 27rem;
-  margin: 2rem auto 0;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: .75rem;
 }
 
-@media (min-width: 760px) {
-  .triada__tarjetas {
-    grid-template-columns: repeat(3, 1fr);
-    gap: 1.35rem;
-    max-width: none;
-  }
-}
-
-/* Tarjeta de porcelana (es un botón: al pulsarla copia el HEX) */
 .tarjeta {
   position: relative;
-  display: grid;
-  grid-template-columns: auto 1fr;
-  grid-template-areas:
-    "cabecera datos"
-    "cabecera accion";
-  column-gap: 1.1rem;
-  align-items: center;
-  width: 100%;
-  padding: 1.25rem 1.35rem;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: .9rem;
+  /* abajo queda sitio para "Copiar" */
+  padding: 1.1rem 1.1rem 2.4rem;
   font: inherit;
   text-align: left;
   color: var(--espresso);
-  background:
-    radial-gradient(130% 90% at 15% 0%, #FFFFFF 0%, rgba(255, 255, 255, 0) 60%),
-    linear-gradient(180deg, #FFFEFA, #FFF8EC);
-  border: 1px solid rgba(184, 146, 74, .7);
-  border-radius: 1.25rem;
-  box-shadow: var(--sombra-porcelana);
+  background: var(--hueso);
+  border: 1px solid rgba(184, 146, 74, .65);
+  border-radius: 10px;
+  box-shadow: 0 1px 2px rgba(59, 42, 32, .06), 0 10px 22px -18px rgba(59, 42, 32, .5);
   cursor: pointer;
   -webkit-tap-highlight-color: transparent;
-  transition:
-    transform 320ms var(--suave),
-    box-shadow 320ms var(--suave),
-    border-color 320ms var(--suave);
-  animation: subir 900ms var(--suave) backwards;
-  animation-delay: calc(1.9s + var(--p, 0) * 110ms);
-}
-
-/* Filete interior, como una placa de porcelana enmarcada */
-.tarjeta::before {
-  content: "";
-  position: absolute;
-  inset: 6px;
-  border: 1px solid rgba(184, 146, 74, .22);
-  border-radius: calc(1.25rem - 6px);
-  pointer-events: none;
-}
-
-/* La tarjeta del color elegido lleva el filete en oro pleno */
-.tarjeta[data-posicion="0"] {
-  border-color: var(--laton);
-}
-
-.tarjeta[data-posicion="0"]::before {
-  border-color: rgba(184, 146, 74, .6);
+  transition: border-color 300ms var(--suave), box-shadow 300ms var(--suave);
 }
 
 @media (hover: hover) {
   .tarjeta:hover {
-    transform: translateY(-3px);
     border-color: var(--laton);
-    box-shadow:
-      inset 0 1px 0 rgba(255, 255, 255, .95),
-      0 26px 40px -24px rgba(59, 42, 32, .55),
-      0 4px 10px -4px rgba(59, 42, 32, .2);
+    box-shadow: 0 1px 2px rgba(59, 42, 32, .06), 0 16px 28px -18px rgba(59, 42, 32, .55);
   }
 }
 
 .tarjeta:active {
-  transform: translateY(0) scale(.985);
+  background: #FFF8EC;
 }
 
-.tarjeta:focus {
-  outline: none;
+/* Tarjeta principal: ocupa las dos columnas en móvil y es más ancha en escritorio */
+.tarjeta--principal {
+  grid-column: 1 / -1;
+  flex-direction: row;
+  align-items: center;
+  gap: 1.25rem;
+  padding: 1.35rem 1.4rem;
+  border-color: var(--laton);
 }
 
-.tarjeta:focus-visible {
-  outline: 2px solid var(--laton-texto);
-  outline-offset: 3px;
-}
-
-.tarjeta__cabecera {
-  grid-area: cabecera;
-}
-
-/* Muestra circular: una cuenta de esmalte con bisel de oro */
+/* Muestra circular con filete dorado */
 .tarjeta__muestra {
-  position: relative;
-  display: block;
-  width: 3.75rem;
-  height: 3.75rem;
+  flex: none;
+  width: 2.6rem;
+  height: 2.6rem;
   border-radius: 50%;
-  overflow: hidden;
   background-color: var(--muestra, #FFD400);
-  box-shadow:
-    0 0 0 3px #FFFDF8,
-    0 0 0 4.5px var(--laton),
-    0 0 0 5.5px rgba(110, 83, 38, .35),
-    0 10px 16px -8px rgba(59, 42, 32, .5);
+  box-shadow: 0 0 0 3px var(--hueso), 0 0 0 4px var(--laton);
+  transition: background-color 400ms var(--suave);
 }
 
-/* Tinta nueva que brota desde el centro al cambiar de color */
-.tarjeta__tinta {
-  position: absolute;
-  inset: 0;
-  border-radius: 50%;
-  transform: scale(0);
+.tarjeta--principal .tarjeta__muestra {
+  width: 4.5rem;
+  height: 4.5rem;
 }
 
-/* Reflejo del esmalte por encima de todo */
-.tarjeta__muestra::after {
-  content: "";
-  position: absolute;
-  inset: 0;
-  border-radius: 50%;
-  background:
-    radial-gradient(circle at 32% 26%, rgba(255, 255, 255, .85) 0 7%, rgba(255, 255, 255, .2) 22%, rgba(255, 255, 255, 0) 42%),
-    radial-gradient(circle at 50% 50%, rgba(0, 0, 0, 0) 55%, rgba(0, 0, 0, .22) 100%);
-}
-
-.tarjeta__posicion {
-  position: absolute;
-  top: 1rem;
-  right: 1.2rem;
-  font-size: .75rem;
-  color: var(--cafe-leche-texto);
-}
-
-.tarjeta__datos {
-  grid-area: datos;
+.tarjeta__texto {
   display: flex;
   flex-direction: column;
   min-width: 0;
-  padding-right: 3.25rem;
 }
 
 .tarjeta__nombre {
-  font-family: var(--fuente-titulos);
+  font-family: var(--serif);
   font-weight: 600;
-  font-size: 1.625rem;
+  font-size: 1.4rem;
   line-height: 1.05;
   overflow-wrap: anywhere;
 }
 
+.tarjeta--principal .tarjeta__nombre {
+  font-size: 2rem;
+}
+
 .tarjeta__categoria {
-  display: inline-flex;
-  align-items: center;
-  gap: .45rem;
-  margin-top: .3rem;
+  margin-top: .2rem;
   font-size: .8125rem;
   color: var(--cafe-leche-texto);
+}
+
+.tarjeta__codigos {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: .1rem .6rem;
+  margin-top: .55rem;
+  font-variant-numeric: tabular-nums;
 }
 
 .tarjeta__hex {
-  margin-top: .55rem;
-  font-size: 1.0625rem;
-  font-weight: 600;
-  letter-spacing: .04em;
-  font-variant-numeric: tabular-nums;
+  font-size: .9375rem;
+  font-weight: 500;
+  letter-spacing: .03em;
 }
 
 .tarjeta__rgb {
-  font-size: .8125rem;
+  font-size: .75rem;
   color: var(--cafe-leche-texto);
-  font-variant-numeric: tabular-nums;
+}
+
+/* Posición del color en la rueda, en cifras de la serif */
+.tarjeta__grados {
+  position: absolute;
+  top: .7rem;
+  right: .9rem;
+  font-family: var(--serif);
+  font-style: italic;
+  font-size: 1.05rem;
+  color: var(--cafe-leche);
 }
 
 .tarjeta__accion {
-  grid-area: accion;
-  display: inline-flex;
-  align-items: center;
-  gap: .4rem;
-  margin-top: .6rem;
-  font-size: .8125rem;
+  position: absolute;
+  right: .9rem;
+  bottom: .75rem;
+  font-size: .75rem;
   font-weight: 500;
   color: var(--laton-texto);
-}
-
-.tarjeta__icono {
-  width: 1rem;
-  height: 1rem;
-  fill: none;
-  stroke: currentColor;
-  stroke-width: 1.4;
-  stroke-linecap: round;
-  stroke-linejoin: round;
-}
-
-.tarjeta__icono--hecho {
-  display: none;
-  stroke-width: 1.9;
 }
 
 .tarjeta.copiada .tarjeta__accion {
   color: var(--salvia-texto);
 }
 
-.tarjeta.copiada .tarjeta__icono--copiar {
-  display: none;
-}
+@media (min-width: 640px) {
+  .tarjetas {
+    grid-template-columns: minmax(0, 1.7fr) minmax(0, 1fr) minmax(0, 1fr);
+    gap: 1rem;
+  }
 
-.tarjeta.copiada .tarjeta__icono--hecho {
-  display: block;
-  animation: marca 420ms var(--rebote);
-}
-
-@keyframes marca {
-  from {
-    transform: scale(.3) rotate(-20deg);
-    opacity: 0;
+  .tarjeta--principal {
+    grid-column: auto;
   }
 }
 
-/* En tres columnas la tarjeta pasa a vertical: muestra arriba y texto a todo el ancho */
-@media (min-width: 760px) {
-  .tarjeta {
-    grid-template-columns: 1fr;
-    grid-template-areas:
-      "cabecera"
-      "datos"
-      "accion";
-    padding: 1.5rem 1.5rem 1.3rem;
-  }
-
-  .tarjeta__cabecera {
-    margin-bottom: 1.1rem;
-  }
-
-  .tarjeta__datos {
-    padding-right: 0;
-  }
-
-  .tarjeta__accion {
-    margin-top: 1rem;
-    padding-top: .85rem;
-    border-top: 1px solid rgba(184, 146, 74, .25);
-  }
-}
-
-/* Botón para copiar los tres códigos a la vez */
-.boton-paleta {
-  display: inline-flex;
-  align-items: center;
-  gap: .55rem;
-  margin-top: 1.75rem;
-  padding: .75rem 1.35rem .75rem 1.1rem;
+/* Copiar los tres códigos: botón de texto subrayado en latón */
+.copiar-todo {
+  margin-top: 1.25rem;
+  padding: .3rem 0;
   font: inherit;
   font-size: .9375rem;
-  font-weight: 500;
   color: var(--espresso);
-  background: var(--hueso);
-  border: 1px solid var(--laton);
-  border-radius: 999px;
-  box-shadow: var(--sombra-porcelana);
+  background: none;
+  border: 0;
+  border-bottom: 1px solid var(--laton);
   cursor: pointer;
-  transition: transform 300ms var(--suave), background-color 300ms var(--suave);
-  animation: subir 900ms var(--suave) 2.3s backwards;
-}
-
-.boton-paleta svg {
-  width: 1.3rem;
-  height: 1.3rem;
-  fill: none;
-  stroke: var(--laton-texto);
-  stroke-width: 1.4;
 }
 
 @media (hover: hover) {
-  .boton-paleta:hover {
-    transform: translateY(-2px);
-    background: #FFF8EA;
+  .copiar-todo:hover {
+    color: var(--laton-texto);
   }
 }
 
-.boton-paleta:active {
-  transform: scale(.98);
-}
-
-.boton-paleta:focus {
-  outline: none;
-}
-
-.boton-paleta:focus-visible {
-  outline: 2px solid var(--laton-texto);
-  outline-offset: 3px;
-}
-
 /* --------------------------------------------------------------------------
-   8. Pie de página
+   9. Pie
    -------------------------------------------------------------------------- */
 .pie {
-  padding: 1.5rem 1rem 2.5rem;
-  text-align: center;
+  margin-top: 3.5rem;
+  padding-top: 1.25rem;
+  border-top: 1px solid rgba(184, 146, 74, .35);
   font-size: .8125rem;
   color: var(--cafe-leche-texto);
 }
@@ -1100,22 +751,8 @@ body::after {
   margin: 0;
 }
 
-.pie__leyenda {
-  display: flex;
-  flex-wrap: wrap;
-  justify-content: center;
-  gap: .5rem 1.5rem;
-  margin-bottom: .6rem !important;
-}
-
-.pie__clave {
-  display: inline-flex;
-  align-items: center;
-  gap: .45rem;
-}
-
 /* --------------------------------------------------------------------------
-   9. Aviso al copiar
+   10. Aviso al copiar
    -------------------------------------------------------------------------- */
 .aviso {
   position: fixed;
@@ -1124,46 +761,39 @@ body::after {
   z-index: 10;
   display: flex;
   align-items: center;
-  gap: .65rem;
+  gap: .6rem;
   max-width: calc(100vw - 2rem);
-  padding: .75rem 1.2rem .75rem .85rem;
-  font-size: .9rem;
+  padding: .65rem 1rem;
+  font-size: .875rem;
   color: var(--marfil);
   background: var(--espresso);
-  border: 1px solid rgba(184, 146, 74, .65);
-  border-radius: 999px;
-  box-shadow: 0 18px 34px -14px rgba(59, 42, 32, .65);
+  border-radius: 6px;
+  box-shadow: 0 12px 26px -14px rgba(59, 42, 32, .7);
   opacity: 0;
-  transform: translate(-50%, 1rem) scale(.96);
+  transform: translate(-50%, .75rem);
   pointer-events: none;
-  transition:
-    opacity 300ms var(--suave),
-    transform 450ms var(--rebote);
+  transition: opacity 300ms var(--suave), transform 400ms var(--suave);
 }
 
 .aviso.visible {
   opacity: 1;
-  transform: translate(-50%, 0) scale(1);
+  transform: translate(-50%, 0);
 }
 
-.aviso__puntos {
-  display: inline-flex;
-}
-
-.aviso__punto {
+.aviso__muestra {
   flex: none;
-  width: .95rem;
-  height: .95rem;
+  width: .8rem;
+  height: .8rem;
   border-radius: 50%;
-  box-shadow: 0 0 0 2px var(--espresso), 0 0 0 3px var(--laton);
+  box-shadow: 0 0 0 1.5px var(--espresso), 0 0 0 2.5px var(--laton);
 }
 
-.aviso__punto + .aviso__punto {
-  margin-left: -.2rem;
+.aviso__muestra + .aviso__muestra {
+  margin-left: -.35rem;
 }
 
 /* --------------------------------------------------------------------------
-   10. Movimiento reducido: sin animaciones para quien lo prefiera
+   11. Movimiento reducido
    -------------------------------------------------------------------------- */
 @media (prefers-reduced-motion: reduce) {
   *,
@@ -1172,11 +802,6 @@ body::after {
     transition-duration: 1ms !important;
     animation-duration: 1ms !important;
     animation-delay: 0ms !important;
-    animation-iteration-count: 1 !important;
     scroll-behavior: auto !important;
-  }
-
-  .rueda {
-    transform: none !important;
   }
 }
