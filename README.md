@@ -11,19 +11,32 @@ Se abre directamente en el navegador y se puede publicar tal cual con GitHub Pag
 - **12 colores en su posición RYB**: 3 primarios (rojo, amarillo, azul), 3 secundarios
   (naranja, verde, violeta) y 6 terciarios (rojo-naranja, amarillo-naranja, amarillo-verde,
   azul-verde, azul-violeta, rojo-violeta).
-- **Girar la rueda** arrastrando con el ratón o con el dedo (Pointer Events, compatible con
-  pantallas táctiles). Al soltar, la rueda se asienta con suavidad en el segmento más cercano,
-  con una pequeña inercia si la lanzas rápido.
-- **Elegir un color**: con un clic o un toque sobre un segmento, o girando la rueda hasta dejarlo
-  bajo el indicador dorado.
-- **Tríada resaltada**: los tres colores se elevan con borde dorado, un leve aumento de tamaño y
-  sombra suave; el resto de la rueda se atenúa y un triángulo dorado los une en el centro.
-- **Tarjetas de la tríada** con nombre, categoría y código HEX. Al pulsar una tarjeta se copia el
-  HEX al portapapeles y aparece un aviso breve.
+- **Plato de porcelana esmaltada**: anillo de latón cepillado, esmaltes separados por filetes de
+  oro (cloisonné), nombres grabados en el borde con 1, 2 o 3 perlas según la categoría, collar de
+  perlas doradas y brillo de esmalte fijo, como la luz de la cocina.
+- **Giro con física real**: arrastra con el ratón o con el dedo (Pointer Events). Si la lanzas,
+  sigue girando por inercia y se asienta con un muelle suave en el segmento más cercano.
+- **Colgante dorado**: marca el color activo, muestra su gema del mismo color y oscila cada vez
+  que un filete pasa por debajo, como el trinquete de una ruleta.
+- **Sonido sintetizado** (Web Audio, sin archivos): un clic metálico por cada segmento y un
+  arpegio de caja de música al elegir. Cada color es un semitono, así que una tríada suena como
+  un acorde aumentado. Se puede silenciar con el botón de arriba a la derecha.
+- **Elegir un color**: con un clic o un toque sobre un segmento (la rueda lo lleva al colgante)
+  o soltando la rueda con el color deseado bajo el colgante.
+- **Tríada resaltada**: los tres esmaltes se elevan con bisel de oro, un leve aumento de tamaño y
+  sombra suave; el resto se atenúa. Un triángulo dorado se dibuja en el centro con una veladura de
+  los tres colores y joyas en los vértices, y una onda dorada recorre la rueda.
+- **Vista previa**: al pasar el ratón por un color, o mientras arrastras, un triángulo punteado
+  anticipa su tríada.
+- **Luz reflejada**: los colores de la tríada iluminan la encimera alrededor del plato y giran con él.
+- **Inclinación 3D** del plato hacia el puntero en escritorio.
+- **Tarjetas de porcelana** con nombre, categoría, HEX y RGB. Al pulsar una tarjeta se copia el
+  HEX; el botón *Copiar paleta* copia los tres códigos a la vez.
 - **Accesible**: navegación con teclado, etiquetas ARIA, anuncios para lectores de pantalla y
   contraste AA del texto sobre el fondo crema.
 - **Responsive**: móvil, tableta y escritorio.
-- **Respeta `prefers-reduced-motion`**: sin animaciones para quien lo tenga activado.
+- **Respeta `prefers-reduced-motion`**: sin animaciones, inclinación ni inercia para quien lo
+  tenga activado.
 
 ## Uso con teclado
 
@@ -64,7 +77,7 @@ circulo-cromatico/
 ├── css/
 │   └── styles.css    Tema visual (marfil, lino, latón y café), rueda, tarjetas y responsive
 ├── js/
-│   └── app.js        Datos de colores, dibujo SVG, giro, selección, tríadas y copiado
+│   └── app.js        Datos, dibujo SVG, física del giro, sonido, tríadas, tarjetas y copiado
 ├── README.md
 └── .gitignore
 ```
