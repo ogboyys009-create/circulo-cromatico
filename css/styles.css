@@ -1,0 +1,680 @@
+/* ==========================================================================
+   Círculo Cromático — hoja de estilos
+   Tema claro inspirado en una cocina clásica de lujo:
+   marfil y lino de fondo, latón cepillado en los detalles, café en el texto
+   y la rueda como un plato de porcelana sobre una bandeja giratoria.
+   ========================================================================== */
+
+/* --------------------------------------------------------------------------
+   1. Tokens de diseño
+   -------------------------------------------------------------------------- */
+:root {
+  /* Paleta base */
+  --marfil: #FAF3E3;          /* fondo principal */
+  --lino: #F0E4CC;            /* final del degradado de fondo */
+  --hueso: #FFFCF5;           /* tarjetas y etiquetas */
+  --porcelana: #FFFDF8;       /* borde del plato y separadores */
+  --laton: #B8924A;           /* bordes, líneas y adornos */
+  --laton-claro: #E9D3A0;
+  --laton-sombra: #7E6230;
+  --laton-texto: #7D5F27;     /* latón oscurecido: contraste AA como texto/foco */
+  --espresso: #3B2A20;        /* texto principal */
+  --cafe-leche: #8A7260;      /* texto secundario grande y detalles */
+  --cafe-leche-texto: #725D4D;/* café con leche algo más oscuro para texto pequeño (AA) */
+  --salvia: #9CAF88;          /* toque decorativo: confirmación de copiado */
+
+  /* Tipografía */
+  --fuente-titulos: "Cormorant Garamond", "Playfair Display", Georgia, "Times New Roman", serif;
+  --fuente-texto: "Inter", "Lato", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+
+  /* Movimiento: transiciones de 300-500 ms con curva suave */
+  --suave: cubic-bezier(.22, .8, .24, 1);
+  --duracion: 450ms;
+
+  /* Tamaño de la rueda: cabe en móvil, tableta y escritorio (y en pantallas bajas) */
+  --rueda: min(82vw, 440px, max(280px, 62vh));
+
+  /* Sombra "porcelana" compartida por tarjetas y etiquetas */
+  --sombra-porcelana:
+    inset 0 1px 0 rgba(255, 255, 255, .9),
+    0 14px 28px -18px rgba(59, 42, 32, .45),
+    0 2px 6px -3px rgba(59, 42, 32, .16);
+}
+
+/* --------------------------------------------------------------------------
+   2. Base
+   -------------------------------------------------------------------------- */
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html {
+  background: var(--marfil);
+  color: var(--espresso);
+  -webkit-text-size-adjust: 100%;
+}
+
+body {
+  margin: 0;
+  min-height: 100vh;
+  min-height: 100svh;
+  display: flex;
+  flex-direction: column;
+  font-family: var(--fuente-texto);
+  font-size: 1rem;
+  line-height: 1.55;
+  -webkit-font-smoothing: antialiased;
+  /* "isolation" crea un contexto de apilado para que el fondo (z-index: -1) quede detrás */
+  position: relative;
+  isolation: isolate;
+}
+
+/* Fondo fijo: degradado marfil → lino + textura de lino muy leve (ruido SVG) */
+body::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  background-color: var(--marfil);
+  background-image:
+    /* hilos horizontales del lino */
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='220' height='220'%3E%3Cfilter id='h'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.012 0.9' numOctaves='2' seed='4' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 0.42 0 0 0 0 0.33 0 0 0 0 0.22 0 0 0 0.09 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23h)'/%3E%3C/svg%3E"),
+    /* hilos verticales del lino */
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='220' height='220'%3E%3Cfilter id='v'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9 0.012' numOctaves='2' seed='9' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 0.42 0 0 0 0 0.33 0 0 0 0 0.22 0 0 0 0.07 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23v)'/%3E%3C/svg%3E"),
+    /* luz cálida desde arriba */
+    radial-gradient(ellipse 80% 55% at 50% 0%, rgba(255, 253, 246, .85), rgba(255, 253, 246, 0) 70%),
+    /* degradado general marfil → lino */
+    linear-gradient(180deg, var(--marfil) 0%, var(--marfil) 35%, var(--lino) 100%);
+}
+
+/* Texto solo para lectores de pantalla */
+.solo-lector {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  padding: 0;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+/* --------------------------------------------------------------------------
+   3. Estructura de la página
+   -------------------------------------------------------------------------- */
+.pagina {
+  flex: 1;
+  width: 100%;
+  max-width: 64rem;
+  margin: 0 auto;
+  padding: clamp(2.5rem, 7vw, 4.5rem) 1rem 3rem;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+/* --------------------------------------------------------------------------
+   4. Encabezado
+   -------------------------------------------------------------------------- */
+.encabezado {
+  text-align: center;
+}
+
+.encabezado__titulo {
+  margin: 0;
+  font-family: var(--fuente-titulos);
+  font-weight: 600;
+  font-size: clamp(2.75rem, 1.6rem + 5.2vw, 4.75rem);
+  line-height: 1;
+  letter-spacing: -.005em;
+  color: var(--espresso);
+}
+
+/* Adorno: línea — rombo — línea, en latón */
+.adorno {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: .8rem;
+  margin: 1.1rem auto .95rem;
+}
+
+.adorno__linea {
+  width: clamp(3rem, 12vw, 5.75rem);
+  height: 1px;
+  background: linear-gradient(90deg, rgba(184, 146, 74, 0), var(--laton));
+}
+
+.adorno__linea:last-child {
+  background: linear-gradient(90deg, var(--laton), rgba(184, 146, 74, 0));
+}
+
+.adorno__rombo {
+  width: .5rem;
+  height: .5rem;
+  background: var(--laton);
+  transform: rotate(45deg);
+  box-shadow: 0 0 0 3px var(--marfil), 0 0 0 4px rgba(184, 146, 74, .6);
+}
+
+.encabezado__subtitulo {
+  margin: 0;
+  font-size: clamp(1.0625rem, .95rem + .5vw, 1.25rem);
+  color: var(--cafe-leche-texto);
+  letter-spacing: .01em;
+}
+
+/* --------------------------------------------------------------------------
+   5. Escena de la rueda
+   -------------------------------------------------------------------------- */
+.escena {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  margin-top: clamp(2rem, 5vw, 3rem);
+}
+
+/* Etiqueta con el color que está bajo el indicador */
+.etiqueta-indicador {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: .55rem;
+  min-width: 11.5rem;
+  /* deja sitio para el colgante dorado que sobresale por arriba de la rueda */
+  margin: 0 0 calc(var(--rueda) * .05 + .55rem);
+  padding: .4rem 1rem .4rem .55rem;
+  background: var(--hueso);
+  border: 1px solid rgba(184, 146, 74, .75);
+  border-radius: 999px;
+  font-size: .9375rem;
+  font-weight: 500;
+  color: var(--espresso);
+  box-shadow: var(--sombra-porcelana);
+}
+
+.etiqueta-indicador__punto {
+  width: .875rem;
+  height: .875rem;
+  border-radius: 50%;
+  background-color: #FFD400;
+  box-shadow: 0 0 0 2px var(--hueso), 0 0 0 3px var(--laton);
+  transition: background-color 300ms var(--suave);
+}
+
+/* La rueda: contenedor cuadrado con capas apiladas */
+.rueda {
+  position: relative;
+  width: var(--rueda);
+  height: var(--rueda);
+  border-radius: 50%;
+  cursor: grab;
+  /* el gesto de arrastre gira la rueda en lugar de desplazar la página */
+  touch-action: none;
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-touch-callout: none;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.rueda.arrastrando {
+  cursor: grabbing;
+}
+
+.rueda:focus {
+  outline: none;
+}
+
+.rueda:focus-visible {
+  outline: 2px solid var(--laton-texto);
+  outline-offset: 8px;
+}
+
+.rueda__plato,
+.rueda__rotor,
+.rueda__brillo {
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+}
+
+/* Plato: anillo exterior de latón cepillado + sombra suave debajo */
+.rueda__plato {
+  background:
+    /* vetas concéntricas del cepillado */
+    repeating-radial-gradient(circle at 50% 50%, rgba(255, 255, 255, .07) 0 1px, rgba(60, 40, 10, .05) 1px 2px),
+    /* reflejos del metal */
+    conic-gradient(from 200deg,
+      #9C7A3C, #EBD6A4 10%, #B8924A 22%, #80632F 34%, #C9A764 47%,
+      #F2E0B3 58%, #A8843F 70%, #D8BB79 84%, #9C7A3C);
+  box-shadow:
+    0 0 0 1px rgba(126, 98, 48, .55),
+    0 32px 48px -24px rgba(59, 42, 32, .55),
+    0 14px 22px -12px rgba(59, 42, 32, .28);
+}
+
+/* Borde de porcelana entre el latón y los colores */
+.rueda__plato::before {
+  content: "";
+  position: absolute;
+  inset: 1.75%;
+  border-radius: 50%;
+  background: radial-gradient(circle, var(--porcelana) 88%, #F1E6D0 100%);
+  box-shadow:
+    inset 0 0 0 1px rgba(126, 98, 48, .45),
+    inset 0 2px 5px rgba(59, 42, 32, .18);
+}
+
+/* Rotor: solo esta capa gira (transform en GPU, sin repintar el resto) */
+.rueda__rotor {
+  will-change: transform;
+}
+
+.rueda__rotor svg {
+  display: block;
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+}
+
+/* Brillo de porcelana esmaltada: fijo, como la luz de la cocina */
+.rueda__brillo {
+  inset: 1.75%;
+  pointer-events: none;
+  background:
+    radial-gradient(ellipse 42% 30% at 33% 22%, rgba(255, 255, 255, .42), rgba(255, 255, 255, 0) 72%),
+    radial-gradient(circle at 44% 41%, rgba(255, 255, 255, .55), rgba(255, 255, 255, 0) 17%),
+    radial-gradient(ellipse 70% 60% at 72% 86%, rgba(59, 42, 32, .07), rgba(59, 42, 32, 0) 70%);
+}
+
+/* Eje central de latón */
+.rueda__eje {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 3.2%;
+  aspect-ratio: 1;
+  border-radius: 50%;
+  transform: translate(-50%, -50%);
+  background: radial-gradient(circle at 35% 30%, #F4E4BC, var(--laton) 55%, var(--laton-sombra));
+  box-shadow: 0 1px 2px rgba(59, 42, 32, .4);
+  pointer-events: none;
+}
+
+/* Indicador dorado: su punta toca el borde exterior de los segmentos */
+.rueda__indicador {
+  position: absolute;
+  left: 50%;
+  top: -4%;
+  width: 6%;
+  height: auto;
+  transform: translateX(-50%);
+  filter: drop-shadow(0 2px 2px rgba(59, 42, 32, .35));
+  pointer-events: none;
+  overflow: visible;
+}
+
+.escena__ayuda {
+  max-width: 34rem;
+  margin: clamp(1.75rem, 4vw, 2.25rem) 0 0;
+  text-align: center;
+  font-size: .875rem;
+  color: var(--cafe-leche-texto);
+}
+
+.escena__ayuda-teclado {
+  display: block;
+}
+
+/* En pantallas táctiles no hace falta la ayuda de teclado */
+@media (hover: none) and (pointer: coarse) {
+  .escena__ayuda-teclado {
+    display: none;
+  }
+}
+
+/* --------------------------------------------------------------------------
+   6. Elementos del SVG (creados por js/app.js)
+   -------------------------------------------------------------------------- */
+
+/* Segmentos base: separados por finas líneas de porcelana */
+.segmento {
+  stroke: var(--porcelana);
+  stroke-width: 1.6;
+  stroke-linejoin: round;
+  transition: opacity var(--duracion) var(--suave);
+}
+
+/* Con una tríada elegida, el resto de la rueda se atenúa un poco */
+.rueda.con-seleccion .segmento:not(.en-triada) {
+  opacity: .6;
+}
+
+@media (hover: hover) {
+  .rueda.con-seleccion:not(.arrastrando) .segmento:not(.en-triada):hover {
+    opacity: .85;
+  }
+}
+
+/* Copias elevadas de los segmentos de la tríada: borde dorado, escala y sombra */
+.realce {
+  opacity: 0;
+  transform: scale(1);
+  transform-box: view-box;   /* el origen (centroide del segmento) lo fija JS en unidades del SVG */
+  stroke: var(--laton);
+  stroke-width: 2.6;
+  stroke-linejoin: round;
+  pointer-events: none;
+  transition:
+    opacity 380ms var(--suave),
+    transform var(--duracion) var(--suave);
+}
+
+.realce.activo {
+  opacity: 1;
+  transform: scale(1.07);
+}
+
+/* Disco central color crema */
+.centro__disco {
+  fill: url(#degradado-centro);
+}
+
+.centro__linea {
+  fill: none;
+  stroke: var(--laton);
+}
+
+/* Triángulo dorado que une los tres colores de la tríada */
+.triangulo {
+  opacity: 0;
+  transform-box: view-box;
+  transform-origin: 0 0;     /* (0,0) es el centro del viewBox */
+  pointer-events: none;
+  transition:
+    transform 500ms var(--suave),
+    opacity 400ms var(--suave);
+}
+
+.rueda.con-seleccion .triangulo {
+  opacity: 1;
+}
+
+.triangulo__linea {
+  fill: rgba(184, 146, 74, .07);
+  stroke: var(--laton);
+  stroke-width: 1.4;
+  stroke-linejoin: round;
+}
+
+.triangulo__vertice {
+  stroke: var(--laton);
+  stroke-width: 1.8;
+  transition: fill 400ms var(--suave);
+}
+
+/* --------------------------------------------------------------------------
+   7. Tríada y tarjetas
+   -------------------------------------------------------------------------- */
+.triada {
+  width: 100%;
+  margin-top: clamp(2.5rem, 6vw, 3.5rem);
+  text-align: center;
+}
+
+.triada__titulo {
+  margin: 0;
+  font-family: var(--fuente-titulos);
+  font-weight: 600;
+  font-size: clamp(1.875rem, 1.4rem + 1.8vw, 2.5rem);
+  line-height: 1.1;
+  color: var(--espresso);
+}
+
+.triada__descripcion {
+  max-width: 34rem;
+  margin: .6rem auto 0;
+  color: var(--cafe-leche-texto);
+}
+
+.triada__tarjetas {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: .875rem;
+  max-width: 26rem;
+  margin: 1.75rem auto 0;
+}
+
+@media (min-width: 760px) {
+  .triada__tarjetas {
+    grid-template-columns: repeat(3, 1fr);
+    gap: 1.25rem;
+    max-width: none;
+  }
+}
+
+/* Tarjeta estilo porcelana (es un botón: al pulsarla copia el HEX) */
+.tarjeta {
+  position: relative;
+  display: block;
+  width: 100%;
+  padding: 1.15rem 1.25rem;
+  font: inherit;
+  text-align: left;
+  color: var(--espresso);
+  background: linear-gradient(180deg, #FFFFFC, var(--hueso));
+  border: 1px solid rgba(184, 146, 74, .7);
+  border-radius: 1.125rem;
+  box-shadow: var(--sombra-porcelana);
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+  transition:
+    transform 300ms var(--suave),
+    box-shadow 300ms var(--suave),
+    border-color 300ms var(--suave);
+}
+
+/* La tarjeta del color elegido lleva un doble filete dorado */
+.tarjeta[data-posicion="0"] {
+  border-color: var(--laton);
+  box-shadow: inset 0 0 0 3px var(--hueso), inset 0 0 0 4px rgba(184, 146, 74, .35), var(--sombra-porcelana);
+}
+
+@media (hover: hover) {
+  .tarjeta:hover {
+    transform: translateY(-2px);
+    border-color: var(--laton);
+  }
+}
+
+.tarjeta:active {
+  transform: translateY(0) scale(.985);
+}
+
+.tarjeta:focus {
+  outline: none;
+}
+
+.tarjeta:focus-visible {
+  outline: 2px solid var(--laton-texto);
+  outline-offset: 3px;
+}
+
+/* Contenido que se desvanece al cambiar de tríada */
+.tarjeta__contenido {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+/* Muestra circular del color, como una cuenta de esmalte con filete dorado */
+.tarjeta__muestra {
+  flex: none;
+  width: 3.25rem;
+  height: 3.25rem;
+  border-radius: 50%;
+  background-color: var(--muestra);
+  box-shadow:
+    0 0 0 3px var(--hueso),
+    0 0 0 4.5px var(--laton),
+    0 6px 12px -4px rgba(59, 42, 32, .4),
+    inset 0 -5px 8px rgba(0, 0, 0, .14),
+    inset 0 4px 6px rgba(255, 255, 255, .35);
+  transition: background-color 400ms var(--suave);
+}
+
+.tarjeta__texto {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  padding-right: 3.5rem;   /* espacio para la etiqueta de posición */
+}
+
+.tarjeta__nombre {
+  font-family: var(--fuente-titulos);
+  font-weight: 600;
+  font-size: 1.5rem;
+  line-height: 1.1;
+  overflow-wrap: anywhere;
+}
+
+.tarjeta__categoria {
+  margin-top: .15rem;
+  font-size: .8125rem;
+  color: var(--cafe-leche-texto);
+}
+
+.tarjeta__hex {
+  display: inline-flex;
+  align-items: center;
+  gap: .4rem;
+  margin-top: .35rem;
+  font-size: .9375rem;
+  font-weight: 500;
+  letter-spacing: .03em;
+  font-variant-numeric: tabular-nums;
+  color: var(--espresso);
+}
+
+.tarjeta__icono {
+  width: 1rem;
+  height: 1rem;
+  fill: none;
+  stroke: var(--laton-texto);
+  stroke-width: 1.4;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.tarjeta__icono--hecho {
+  display: none;
+  stroke: #5E7350;            /* salvia oscurecida para que se vea bien */
+  stroke-width: 1.8;
+}
+
+.tarjeta.copiada .tarjeta__icono--copiar {
+  display: none;
+}
+
+.tarjeta.copiada .tarjeta__icono--hecho {
+  display: block;
+}
+
+/* En tres columnas la tarjeta pasa a vertical: la muestra arriba y el texto
+   con todo el ancho, para que quepan nombres largos como "Amarillo-naranja" */
+@media (min-width: 760px) {
+  .tarjeta {
+    padding: 1.35rem 1.4rem 1.3rem;
+  }
+
+  .tarjeta__contenido {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 1rem;
+  }
+
+  .tarjeta__texto {
+    padding-right: 0;
+  }
+}
+
+/* Etiqueta de posición en la tríada: "Tu color", "A 120°", "A 240°" */
+.tarjeta__posicion {
+  position: absolute;
+  top: .9rem;
+  right: 1.1rem;
+  font-size: .75rem;
+  color: var(--cafe-leche-texto);
+}
+
+/* --------------------------------------------------------------------------
+   8. Pie de página
+   -------------------------------------------------------------------------- */
+.pie {
+  padding: 1rem 1rem 2.25rem;
+  text-align: center;
+  font-size: .8125rem;
+  color: var(--cafe-leche-texto);
+}
+
+.pie p {
+  margin: 0;
+}
+
+/* --------------------------------------------------------------------------
+   9. Aviso al copiar
+   -------------------------------------------------------------------------- */
+.aviso {
+  position: fixed;
+  left: 50%;
+  bottom: max(1.25rem, env(safe-area-inset-bottom));
+  z-index: 10;
+  display: flex;
+  align-items: center;
+  gap: .6rem;
+  max-width: calc(100vw - 2rem);
+  padding: .7rem 1.15rem .7rem .8rem;
+  font-size: .9rem;
+  color: var(--marfil);
+  background: var(--espresso);
+  border: 1px solid rgba(184, 146, 74, .65);
+  border-radius: 999px;
+  box-shadow: 0 16px 30px -14px rgba(59, 42, 32, .6);
+  opacity: 0;
+  transform: translate(-50%, 1rem);
+  pointer-events: none;
+  transition:
+    opacity 300ms var(--suave),
+    transform 400ms var(--suave);
+}
+
+.aviso.visible {
+  opacity: 1;
+  transform: translate(-50%, 0);
+}
+
+.aviso__punto {
+  flex: none;
+  width: .9rem;
+  height: .9rem;
+  border-radius: 50%;
+  box-shadow: 0 0 0 2px var(--espresso), 0 0 0 3px var(--laton);
+}
+
+/* --------------------------------------------------------------------------
+   10. Movimiento reducido: sin animaciones para quien lo prefiera
+   -------------------------------------------------------------------------- */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    transition-duration: 1ms !important;
+    animation-duration: 1ms !important;
+    animation-iteration-count: 1 !important;
+    scroll-behavior: auto !important;
+  }
+}
