@@ -21,8 +21,8 @@
   --velo: rgba(237, 236, 232, .62);   /* atenúa los colores fuera de la armonía */
   --sombra: rgba(25, 25, 27, .16);
 
-  --display: "Instrument Serif", Georgia, "Times New Roman", serif;
-  --texto: "Manrope", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --display: "Bricolage Grotesque", "Arial Black", system-ui, sans-serif;
+  --texto: "Instrument Sans", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
 
   --curva: cubic-bezier(.2, .9, .25, 1);
   --rueda: min(86vw, 460px);
@@ -155,14 +155,123 @@ a {
 /* --------------------------------------------------------------------------
    4. Cabecera
    -------------------------------------------------------------------------- */
+/* Móvil: marca y tema arriba, buscador debajo. Escritorio: los tres en una fila */
 .cabecera {
-  display: flex;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  grid-template-areas:
+    "marca tema"
+    "buscador buscador";
   align-items: center;
-  justify-content: space-between;
-  gap: 1rem;
+  gap: .9rem 1rem;
+}
+
+.cabecera > .boton-icono {
+  grid-area: tema;
+}
+
+@media (min-width: 900px) {
+  .cabecera {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 24rem) auto;
+    grid-template-areas: "marca buscador tema";
+    gap: 1.5rem;
+  }
+}
+
+/* Buscador por código: discreto, del mismo material que los controles */
+.buscador {
+  grid-area: buscador;
+  position: relative;
+}
+
+.buscador__campo {
+  width: 100%;
+  height: 2.75rem;
+  padding: 0 2.9rem 0 2.55rem;
+  font-size: 1rem;           /* 16 px: iOS no hace zoom al enfocar */
+  background: var(--superficie);
+  border: 1px solid var(--linea);
+  border-radius: 12px;
+  transition: border-color 160ms var(--curva);
+  -webkit-appearance: none;
+  appearance: none;
+}
+
+.buscador__campo::placeholder {
+  color: var(--tinta-2);
+  opacity: .85;
+}
+
+.buscador__campo:focus,
+.buscador__campo:focus-visible {
+  outline: none;
+  border-color: var(--tinta);
+}
+
+/* Muestra del color que se va escribiendo */
+.buscador__muestra {
+  position: absolute;
+  left: .85rem;
+  top: 50%;
+  width: 1.05rem;
+  height: 1.05rem;
+  margin-top: -.525rem;
+  border-radius: 50%;
+  box-shadow: inset 0 0 0 1.5px var(--linea);
+  transition: background-color 160ms var(--curva);
+  pointer-events: none;
+}
+
+.buscador__muestra.valida {
+  box-shadow: inset 0 0 0 1px rgba(0, 0, 0, .14);
+}
+
+.buscador__boton {
+  position: absolute;
+  top: 4px;
+  right: 4px;
+  display: grid;
+  place-items: center;
+  width: 2.3rem;
+  height: calc(100% - 8px);
+  padding: 0;
+  color: var(--tinta-2);
+  background: none;
+  border: 0;
+  border-radius: 9px;
+  cursor: pointer;
+}
+
+.buscador__boton svg {
+  width: 1.15rem;
+  height: 1.15rem;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.8;
+  stroke-linecap: round;
+}
+
+@media (hover: hover) {
+  .buscador__boton:hover {
+    color: var(--tinta);
+    background: var(--fondo);
+  }
+}
+
+/* Código no reconocido: un temblor breve */
+.buscador.error .buscador__campo {
+  animation: temblor 360ms var(--curva);
+}
+
+@keyframes temblor {
+  20% { transform: translateX(-5px); }
+  40% { transform: translateX(5px); }
+  60% { transform: translateX(-3px); }
+  80% { transform: translateX(2px); }
 }
 
 .marca {
+  grid-area: marca;
   display: flex;
   align-items: center;
   gap: .75rem;
@@ -178,9 +287,10 @@ a {
 .marca__titulo {
   margin: 0;
   font-family: var(--display);
-  font-weight: 400;
-  font-size: 1.65rem;
-  line-height: 1;
+  font-weight: 800;
+  font-size: 1.25rem;
+  line-height: 1.1;
+  letter-spacing: -.01em;
 }
 
 .marca__lema {
@@ -239,28 +349,29 @@ a {
   contain: layout paint;
 }
 
-/* El nombre, en cursiva grande: la pieza tipográfica de la página */
 .lectura__nombre {
   margin: 0;
-  /* la cursiva sobresale un poco por la derecha: margen para que no se recorte */
-  padding-right: .15em;
   font-family: var(--display);
-  font-style: italic;
-  font-weight: 400;
-  font-size: clamp(2.6rem, 12vw, 4.6rem);
-  font-size: clamp(2.6rem, 13cqi, 5.5rem);
-  line-height: 1;
-  letter-spacing: -.01em;
+  font-weight: 800;
+  font-size: clamp(2.1rem, 9vw, 3.6rem);
+  font-size: clamp(2.1rem, 10.5cqi, 4.25rem);
+  line-height: 1.05;
+  letter-spacing: -.025em;
   white-space: nowrap;
 }
 
+/* Una sola línea: si cambiara de alto al girar, la rueda daría saltos */
 .lectura__datos {
-  display: flex;
-  flex-wrap: wrap;
-  gap: .25rem 1rem;
   margin: .5rem 0 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
   color: var(--tinta-2);
   font-variant-numeric: tabular-nums;
+}
+
+.lectura__datos > span + span {
+  margin-left: 1rem;
 }
 
 .lectura__hex {
@@ -543,10 +654,10 @@ a {
 .panel__titulo {
   margin: 1.5rem 0 0;
   font-family: var(--display);
-  font-style: italic;
-  font-weight: 400;
-  font-size: clamp(2.1rem, 1.6rem + 2vw, 2.9rem);
-  line-height: 1;
+  font-weight: 800;
+  font-size: clamp(1.6rem, 1.2rem + 1.4vw, 2.1rem);
+  line-height: 1.1;
+  letter-spacing: -.02em;
   text-wrap: balance;
 }
 
@@ -641,10 +752,9 @@ a {
 
 .muestra__nombre {
   font-family: var(--display);
-  font-style: italic;
-  font-weight: 400;
-  font-size: 1.65rem;
-  line-height: 1;
+  font-weight: 600;
+  font-size: 1.25rem;
+  line-height: 1.1;
   overflow-wrap: anywhere;
 }
 
@@ -726,10 +836,14 @@ a {
 /* --------------------------------------------------------------------------
    9. Aviso al copiar
    -------------------------------------------------------------------------- */
+/* Centrado con márgenes automáticos (no con left: 50%, que limitaría el ancho a media pantalla) */
 .aviso {
   position: fixed;
-  left: 50%;
+  left: 0;
+  right: 0;
   bottom: calc(1rem + env(safe-area-inset-bottom, 0px));
+  width: max-content;
+  margin-inline: auto;
   z-index: 10;
   display: flex;
   align-items: center;
@@ -742,14 +856,14 @@ a {
   background: var(--tinta);
   border-radius: 12px;
   opacity: 0;
-  transform: translate(-50%, 10px);
+  transform: translateY(10px);
   pointer-events: none;
   transition: opacity 220ms var(--curva), transform 320ms var(--curva);
 }
 
 .aviso.visible {
   opacity: 1;
-  transform: translate(-50%, 0);
+  transform: translateY(0);
 }
 
 .aviso__muestras {

@@ -1,4 +1,4 @@
-Instrument Serif - Copyright The Instrument Serif Project Authors (https://github.com/Instrument/instrument-serif)
+Instrument Sans - Copyright The Instrument Sans Project Authors (https://github.com/Instrument/instrument-sans)
 
 
 This Font Software is licensed under the SIL Open Font License, Version 1.1.

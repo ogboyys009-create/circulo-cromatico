@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <title>Círculo Cromático</title>
-  <meta name="description" content="Rueda cromática RYB de 48 colores. Gírala, elige un color y descubre su tríada, su complementario y otras armonías.">
+  <meta name="description" content="Rueda cromática RYB de 96 colores. Gírala, elige un color y descubre su tríada, su complementario y otras armonías.">
   <meta name="color-scheme" content="light dark">
   <meta name="theme-color" content="#EDECE8" media="(prefers-color-scheme: light)">
   <meta name="theme-color" content="#161618" media="(prefers-color-scheme: dark)">
@@ -40,6 +40,22 @@
           <p class="marca__lema">Gira la rueda y descubre tu tríada</p>
         </div>
       </div>
+
+      <!-- Buscador: escribe un código y la página calcula su tríada, complementario, tonos… -->
+      <form class="buscador" id="buscador" role="search" autocomplete="off" novalidate>
+        <label class="solo-lector" for="codigo">Buscar un color por código o nombre</label>
+        <span class="buscador__muestra" id="codigo-muestra" aria-hidden="true"></span>
+        <input class="buscador__campo" id="codigo" name="codigo" type="text"
+               placeholder="#3A7BD5, rgb(…) o un nombre" spellcheck="false" autocapitalize="off"
+               autocomplete="off" enterkeyhint="search" aria-keyshortcuts="/">
+        <button class="buscador__boton" type="submit" aria-label="Buscar color">
+          <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+            <circle cx="10.5" cy="10.5" r="6"/>
+            <path d="M15 15l5 5"/>
+          </svg>
+        </button>
+      </form>
+
       <button class="boton-icono" id="tema" type="button" aria-label="Cambiar a tema oscuro">
         <svg class="icono-sol" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
           <circle cx="12" cy="12" r="4.2"/>
@@ -71,7 +87,7 @@
             eligen el color anterior o siguiente y la rueda gira hasta él.
           -->
           <div class="rueda" id="rueda" role="listbox" tabindex="0"
-               aria-label="Rueda cromática de 48 colores"
+               aria-label="Rueda cromática de 96 colores"
                aria-describedby="rueda-ayuda">
             <div class="rueda__base" aria-hidden="true"></div>
             <!-- Ventana: recorta las esquinas del rotor al girar (si no, ensancharían la página) -->
@@ -93,7 +109,7 @@
         <div class="dial__pie">
           <p class="dial__ayuda" id="rueda-ayuda">
             Gira el anillo o toca un color.
-            <span class="dial__teclado">Con el teclado, usa las flechas.</span>
+            <span class="dial__teclado">Con el teclado, usa las flechas (con Mayús, de 30° en 30°).</span>
           </p>
           <button class="boton" id="azar" type="button">
             <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
@@ -142,7 +158,7 @@
     </main>
 
     <footer class="pie">
-      <p>48 colores del círculo cromático tradicional (RYB). En pantalla los colores son orientativos: antes de pintar, pide una muestra real.</p>
+      <p>96 colores del círculo cromático tradicional (RYB). En pantalla los colores son orientativos: antes de pintar, pide una muestra real.</p>
       <p><a href="https://github.com/ogboyys009-create/circulo-cromatico">Código en GitHub</a></p>
     </footer>
   </div>
