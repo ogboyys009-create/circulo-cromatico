@@ -73,9 +73,11 @@ azul-violeta, amarillo-verde).
 circulo-cromatico/
 ├── index.html        Estructura de la página y marcado accesible
 ├── css/
+│   ├── fuentes.css   Tipografías incrustadas en base64 (archivo generado)
 │   └── styles.css    Tema visual (marfil, lino, latón y café), rueda, tarjetas y responsive
 ├── js/
 │   └── app.js        Datos, dibujo SVG, física del giro, sonido, tríadas, tarjetas y copiado
+├── licencias/        Licencias SIL Open Font License de las tipografías
 ├── README.md
 └── .gitignore
 ```
@@ -110,7 +112,9 @@ y abre <http://localhost:8000>.
 ## Diseño
 
 - Tipografías: [Cormorant Garamond](https://fonts.google.com/specimen/Cormorant+Garamond) para
-  los títulos e [Inter](https://fonts.google.com/specimen/Inter) para el texto (Google Fonts).
+  títulos, grabados y cifras e [Inter](https://fonts.google.com/specimen/Inter) para el texto.
+  Van incrustadas en `css/fuentes.css`, así que la página se ve igual sin conexión, al abrirla
+  con doble clic o en redes que bloquean Google Fonts. Ambas usan la licencia SIL OFL 1.1.
 - Paleta: marfil `#FAF3E3`, lino `#F0E4CC`, latón `#B8924A`, café espresso `#3B2A20` y
   café con leche `#8A7260`. Para el texto pequeño se usan variantes un poco más oscuras del latón
   y del café con leche, de modo que cumplan el contraste AA.

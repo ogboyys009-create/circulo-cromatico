@@ -404,6 +404,20 @@
     rotor.append(svg);
   }
 
+  /**
+   * Si un nombre no cabe en su tramo del ala del plato (por ejemplo, mientras
+   * carga la tipografía o con una fuente de reserva más ancha), se reduce.
+   */
+  function ajustarRotulos() {
+    const disponible = ((2 * Math.PI * GEO.nombre * PASO) / 360) * 0.9;
+    rotulos.forEach((texto) => {
+      texto.style.fontSize = '';
+      const largo = texto.getComputedTextLength();
+      const tamano = parseFloat(getComputedStyle(texto).fontSize) || 12.5;
+      if (largo > disponible) texto.style.fontSize = `${((tamano * disponible) / largo).toFixed(2)}px`;
+    });
+  }
+
   /* ------------------------------------------------------------------------
      7. Bucle de animación: giro con física y oscilación del colgante
      ------------------------------------------------------------------------ */
@@ -940,6 +954,8 @@
      ------------------------------------------------------------------------ */
   function iniciar() {
     construirRueda();
+    ajustarRotulos();
+    if (document.fonts && document.fonts.ready) document.fonts.ready.then(ajustarRotulos);
     girarTriangulo(0);
     crearTarjetas();
     pintarBotonSonido();
