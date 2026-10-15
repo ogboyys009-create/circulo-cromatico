@@ -1,8 +1,16 @@
 /* ==========================================================================
    Círculo Cromático — js/app.js
-   Plato RYB de 12 colores: se gira arrastrando (con inercia), con un toque o
-   con el teclado; el colgante oscila y suena al pasar cada color, y al elegir
-   se resalta la tríada, se dibuja el triángulo y se actualizan las tarjetas.
+
+   Rueda RYB de 24 colores con armonías (tríada, complementario, análogo,
+   complementario dividido y tétrada), tonos, copia en HEX/RGB/HSL y enlace
+   para compartir.
+
+   Rendimiento:
+   - El anillo se dibuja una sola vez. Al girar solo cambia un transform.
+   - Al soltar, el giro (inercia y muelle) se calcula de antemano y se
+     reproduce con Web Animations: lo ejecuta el compositor del navegador,
+     así va fluido aunque el hilo principal esté ocupado.
+   - Durante el arrastre las escrituras se agrupan en un fotograma.
    JavaScript nativo, sin dependencias.
    ========================================================================== */
 (function () {
@@ -13,101 +21,117 @@
      ------------------------------------------------------------------------ */
 
   /**
-   * Los 12 colores del círculo tradicional (RYB) en sentido horario, empezando
-   * por el amarillo arriba (0°). Cada paso son 30°: los primarios quedan a 0°,
-   * 120° y 240°, los secundarios entre ellos y los terciarios entre cada
-   * primario y su secundario vecino.
+   * 24 colores del círculo tradicional (RYB) en sentido horario desde el
+   * amarillo (0°), cada 15°. Primarios a 0°, 120° y 240°; secundarios entre
+   * ellos; terciarios entre primario y secundario; y entre cada par vecino,
+   * un color intermedio.
    */
   const COLORES = [
-    { nombre: 'Amarillo',         categoria: 'primario',   hex: '#FFD400' },
-    { nombre: 'Amarillo-naranja', categoria: 'terciario',  hex: '#FFA800' },
-    { nombre: 'Naranja',          categoria: 'secundario', hex: '#FF7B00' },
-    { nombre: 'Rojo-naranja',     categoria: 'terciario',  hex: '#F4471C' },
-    { nombre: 'Rojo',             categoria: 'primario',   hex: '#E2231A' },
-    { nombre: 'Rojo-violeta',     categoria: 'terciario',  hex: '#C0186D' },
-    { nombre: 'Violeta',          categoria: 'secundario', hex: '#7D2BB5' },
-    { nombre: 'Azul-violeta',     categoria: 'terciario',  hex: '#4C3CC4' },
-    { nombre: 'Azul',             categoria: 'primario',   hex: '#1D5FD1' },
-    { nombre: 'Azul-verde',       categoria: 'terciario',  hex: '#0098A6' },
-    { nombre: 'Verde',            categoria: 'secundario', hex: '#1FA74A' },
-    { nombre: 'Amarillo-verde',   categoria: 'terciario',  hex: '#9BCB1C' },
-  ];
+    ['Amarillo', '#FFD400'], ['Amarillo dorado', '#FFBE00'], ['Amarillo-naranja', '#FFA800'], ['Mandarina', '#FF9100'],
+    ['Naranja', '#FF7B00'], ['Calabaza', '#FA6110'], ['Rojo-naranja', '#F4471C'], ['Bermellón', '#EC3420'],
+    ['Rojo', '#E2231A'], ['Carmín', '#D11A45'], ['Rojo-violeta', '#C0186D'], ['Púrpura', '#9F2196'],
+    ['Violeta', '#7D2BB5'], ['Amatista', '#6433BD'], ['Azul-violeta', '#4C3CC4'], ['Ultramar', '#344ECB'],
+    ['Azul', '#1D5FD1'], ['Cerúleo', '#0A7DC0'], ['Azul-verde', '#0098A6'], ['Esmeralda', '#10A07A'],
+    ['Verde', '#1FA74A'], ['Verde hierba', '#5BB832'], ['Amarillo-verde', '#9BCB1C'], ['Lima', '#CFD20E'],
+  ].map(([nombre, hex], i) => ({ nombre, hex, categoria: categoriaDe(i), slug: aSlug(nombre) }));
 
-  // Los tres colores de una tríada comparten categoría, así que la tríada se nombra por ella
+  function categoriaDe(i) {
+    if (i % 8 === 0) return 'primario';
+    if (i % 8 === 4) return 'secundario';
+    if (i % 2 === 0) return 'terciario';
+    return 'intermedio';
+  }
+
+  const TOTAL = COLORES.length;   // 24
+  const PASO = 360 / TOTAL;       // 15° por color
+
+  /** Armonías: posiciones relativas al color elegido (en pasos de 15°). */
+  const ARMONIAS = {
+    triada: {
+      nombre: 'Tríada',
+      pasos: [0, 8, 16],
+      periodo: 120,   // la figura se repite cada 120°: la capa gira por el camino más corto
+      texto: 'Tres colores separados 120°. Contraste vivo y equilibrado: deja que uno domine y usa los otros como acento.',
+    },
+    complementario: {
+      nombre: 'Complementario',
+      pasos: [0, 12],
+      periodo: 180,
+      texto: 'Dos colores opuestos, a 180°. Es el contraste más fuerte: úsalo para que algo destaque.',
+    },
+    analogo: {
+      nombre: 'Análogo',
+      pasos: [0, 2, 22],
+      periodo: 360,
+      texto: 'Tu color y sus vecinos a 30°. Una combinación tranquila y natural, con poco contraste.',
+    },
+    dividido: {
+      nombre: 'Complementario dividido',
+      pasos: [0, 10, 14],
+      periodo: 360,
+      texto: 'Tu color y los dos vecinos de su opuesto (150° y 210°). Contraste fuerte, más fácil de equilibrar que el complementario.',
+    },
+    tetrada: {
+      nombre: 'Tétrada',
+      pasos: [0, 6, 12, 18],
+      periodo: 90,
+      texto: 'Cuatro colores a 90°: dos parejas de complementarios. Paleta rica que funciona mejor si uno manda.',
+    },
+  };
+
   const NOMBRE_TRIADA = {
     primario: 'Tríada primaria',
     secundario: 'Tríada secundaria',
     terciario: 'Tríada terciaria',
+    intermedio: 'Tríada intermedia',
   };
 
-  const TOTAL = COLORES.length;     // 12
-  const PASO = 360 / TOTAL;         // 30° por color
-  const SALTO_TRIADA = TOTAL / 3;   // 4 colores = 120°
+  /** Geometría del dibujo en unidades del viewBox (-120 … 120). */
+  const GEO = { exterior: 100, interior: 64, marcador: 82, hueco: 2.2, esquina: 3 };
+  const RADIO_CENTRO = 56;          // disco central (zona para desplazar la página en táctil)
 
-  /** Radios del dibujo, en unidades del viewBox (-200 … 200). */
-  const GEO = {
-    fileteExterior: 190,  // filete dorado junto al filo
-    marcaLarga: 184.5,    // inicio de las marcas en el límite entre colores
-    marcaCorta: 187.2,    // inicio de las marcas cada 6°
-    nombre: 172.5,        // línea base de los nombres
-    fileteInterior: 166,
-    exterior: 162,        // borde externo de los colores
-    interior: 100,        // borde interno de los colores
-    centro: 96,           // disco central
-    triangulo: 78,        // vértices del triángulo
-  };
-
-  // Física (grados y milisegundos)
-  const MUELLE = { w: 0.0115, z: 0.82 };    // asentado en el color: rápido y casi sin rebote
-  const COLGANTE = { w: 0.034, z: 0.28 };   // el colgante oscila un par de veces y se calma
-  const PROYECCION = 260;                   // ms de giro libre que se suman al lanzar la rueda
-  const UMBRAL_ARRASTRE = 6;                // px para distinguir arrastre de toque
+  const MUELLE = { w: 0.013, z: 0.82 };   // asentado con un rebote casi imperceptible
+  const PROYECCION = 300;                 // ms de vuelo libre que se suman al lanzar la rueda
+  const UMBRAL_ARRASTRE = 6;              // px para distinguir arrastre de toque
+  const OSCURO = '#141416';
 
   const SVG_NS = 'http://www.w3.org/2000/svg';
-  const XLINK_NS = 'http://www.w3.org/1999/xlink';
   const preferenciaMovimiento = window.matchMedia('(prefers-reduced-motion: reduce)');
+  const preferenciaOscura = window.matchMedia('(prefers-color-scheme: dark)');
 
   /* ------------------------------------------------------------------------
      2. Referencias al DOM
      ------------------------------------------------------------------------ */
-  const pagina = document.querySelector('.pagina');
-  const marco = document.getElementById('rueda-marco');
-  const rueda = document.getElementById('rueda');
-  const rotor = document.getElementById('rueda-rotor');
-  const colganteSvg = document.getElementById('colgante');
-  const colganteColor = document.getElementById('colgante-color');
-  const bloqueTriada = document.querySelector('.lectura__triada');
-  const tituloTriada = document.getElementById('triada-titulo');
-  const coloresTriada = document.getElementById('triada-colores');
-  const consejoTriada = document.getElementById('triada-consejo');
-  const contenedorTarjetas = document.getElementById('tarjetas');
-  const botonPaleta = document.getElementById('copiar-paleta');
-  const botonSonido = document.getElementById('sonido');
-  const aviso = document.getElementById('aviso');
-  const anunciador = document.getElementById('anunciador');
+  const $ = (id) => document.getElementById(id);
+  const marco = $('rueda-marco');
+  const rueda = $('rueda');
+  const rotor = $('rotor');
+  const centro = $('centro');
+  const capa = $('capa');
+  const lecturaNombre = $('lectura-nombre');
+  const lecturaHex = $('lectura-hex');
+  const lecturaTipo = $('lectura-tipo');
+  const lecturaGrados = $('lectura-grados');
+  const tituloArmonia = $('titulo-armonia');
+  const textoArmonia = $('texto-armonia');
+  const listaMuestras = $('muestras');
+  const aviso = $('aviso');
+  const anunciador = $('anunciador');
 
   /* ------------------------------------------------------------------------
      3. Estado
      ------------------------------------------------------------------------ */
   const estado = {
-    seleccionado: -1,     // color elegido (-1 = ninguno todavía)
-    candidato: -1,        // color bajo el colgante
-    anguloTriangulo: 0,   // giro del triángulo dentro del plato
-    anguloFantasma: 0,    // giro del triángulo punteado
-    tactil: false,        // el último gesto fue con el dedo (para vibrar)
-    interactuado: false,  // el usuario ya tocó la rueda (cancela la entrada automática)
+    seleccionado: 0,   // color elegido
+    vista: -1,         // color que se muestra (bajo el puntero al arrastrar)
+    modo: 'triada',
+    formato: 'hex',
+    anguloCapa: 0,     // giro de la capa de armonía dentro de la rueda
+    tactil: false,
   };
 
-  // Giro del plato: "reposo", "arrastre", "muelle" o "entrada"
-  const giro = { modo: 'reposo', x: 0, v: 0, objetivo: 0, entrada: null, tramo: 0 };
-  const colgante = { x: 0, v: 0 };
-
-  const segmentos = [];
-  const realces = [];
-  const rotulos = [];
-  const vertices = [];
-  const tarjetas = [];
-  let triangulo, trazoTriangulo, fantasma;
+  // Giro de la rueda: ángulo en reposo y animación en curso (Web Animations)
+  const mov = { x: 0, anim: null, puntos: null, destino: 0 };
 
   /* ------------------------------------------------------------------------
      4. Utilidades
@@ -115,16 +139,22 @@
   const mod = (n, m) => ((n % m) + m) % m;
   const limitar = (v, min, max) => Math.min(max, Math.max(min, v));
   const redondear = (n) => Math.round(n * 100) / 100;
-  const capitalizar = (texto) => texto.charAt(0).toUpperCase() + texto.slice(1);
+  const capitalizar = (t) => t.charAt(0).toUpperCase() + t.slice(1);
   const sinMovimiento = () => preferenciaMovimiento.matches;
+  const indiceEn = (angulo) => mod(Math.round(-angulo / PASO), TOTAL);
 
-  /** Lleva un ángulo a (-180, 180] para girar siempre por el camino corto. */
-  function normalizar(angulo) {
-    const a = mod(angulo, 360);
-    return a > 180 ? a - 360 : a;
+  /** Lleva un ángulo a (-180, 180] para girar por el camino corto. */
+  function normalizar(a) {
+    const r = mod(a, 360);
+    return r > 180 ? r - 360 : r;
   }
 
-  /** Punto del SVG a partir de radio y ángulo (0° arriba, sentido horario). */
+  /** Ángulo equivalente a "objetivo" (módulo "periodo") más cercano a "actual". */
+  function cercano(actual, objetivo, periodo) {
+    return actual + mod(objetivo - actual + periodo / 2, periodo) - periodo / 2;
+  }
+
+  /** Punto del SVG (0° arriba, sentido horario). */
   function polar(radio, grados) {
     const rad = (grados * Math.PI) / 180;
     return [redondear(radio * Math.sin(rad)), redondear(-radio * Math.cos(rad))];
@@ -132,579 +162,424 @@
 
   function crearSVG(etiqueta, atributos) {
     const el = document.createElementNS(SVG_NS, etiqueta);
-    Object.keys(atributos || {}).forEach((clave) => el.setAttribute(clave, atributos[clave]));
+    for (const clave in atributos) el.setAttribute(clave, atributos[clave]);
     return el;
   }
 
-  function hexARgb(hex) {
+  function aSlug(texto) {
+    return texto.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase()
+      .replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
+  }
+
+  /* ---- Color ---- */
+  const hexARgb = (hex) => {
     const n = parseInt(hex.slice(1), 16);
     return [(n >> 16) & 255, (n >> 8) & 255, n & 255];
-  }
-
-  /** La tríada de un color: él mismo y los que están a 120° y 240°. */
-  const triadaDe = (i) => [i, mod(i + SALTO_TRIADA, TOTAL), mod(i + 2 * SALTO_TRIADA, TOTAL)];
-
-  /** Color que queda bajo el colgante con un giro dado. */
-  const indiceEnColgante = (angulo) => mod(Math.round(-angulo / PASO), TOTAL);
-
-  /** "a, b y c" */
-  const enumerar = (lista) => `${lista.slice(0, -1).join(', ')} y ${lista[lista.length - 1]}`;
-
-  function leerPreferencia(clave, porDefecto) {
-    try {
-      const valor = localStorage.getItem(clave);
-      return valor === null ? porDefecto : valor === '1';
-    } catch (_) {
-      return porDefecto;
-    }
-  }
-
-  function guardarPreferencia(clave, valor) {
-    try { localStorage.setItem(clave, valor ? '1' : '0'); } catch (_) { /* sin almacenamiento */ }
-  }
-
-  /* ------------------------------------------------------------------------
-     5. Sonido (Web Audio, sin archivos): un clic por color y una nota al elegir
-     ------------------------------------------------------------------------ */
-  const sonido = {
-    activo: leerPreferencia('circulo-cromatico:sonido', true),
-    ctx: null,
-    salida: null,
-    ruido: null,
-    ultimoClic: 0,
-
-    /** El navegador solo deja crear audio después de un gesto del usuario. */
-    desbloquear() {
-      if (!this.activo) return;
-      const Contexto = window.AudioContext || window.webkitAudioContext;
-      if (!Contexto) return;
-      if (!this.ctx) {
-        this.ctx = new Contexto();
-        this.salida = this.ctx.createGain();
-        this.salida.gain.value = 0.5;
-        this.salida.connect(this.ctx.destination);
-        // Ráfaga corta de ruido: la base del clic
-        const muestras = Math.floor(this.ctx.sampleRate * 0.03);
-        this.ruido = this.ctx.createBuffer(1, muestras, this.ctx.sampleRate);
-        const datos = this.ruido.getChannelData(0);
-        for (let i = 0; i < muestras; i++) datos[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / muestras, 4);
-      }
-      if (this.ctx.state === 'suspended') this.ctx.resume();
-    },
-
-    listo() {
-      return this.activo && this.ctx && this.ctx.state === 'running';
-    },
-
-    /** Clic seco, como el trinquete de un dial de latón. */
-    clic(fuerza) {
-      if (!this.listo()) return;
-      const t = this.ctx.currentTime;
-      if (t - this.ultimoClic < 0.03) return;
-      this.ultimoClic = t;
-      const fuente = this.ctx.createBufferSource();
-      fuente.buffer = this.ruido;
-      fuente.playbackRate.value = 0.85 + Math.random() * 0.2;
-      const filtro = this.ctx.createBiquadFilter();
-      filtro.type = 'bandpass';
-      filtro.frequency.value = 2600 + Math.random() * 400;
-      filtro.Q.value = 3;
-      const volumen = this.ctx.createGain();
-      volumen.gain.value = 0.5 * fuerza;
-      fuente.connect(filtro).connect(volumen).connect(this.salida);
-      fuente.start(t);
-    },
-
-    /** Nota suave, como una campanilla pequeña. */
-    nota(frecuencia, cuando, volumen) {
-      if (!this.listo()) return;
-      const t = this.ctx.currentTime + (cuando || 0);
-      [[1, volumen, 1.4], [2.01, volumen * 0.18, 0.5]].forEach(([multiplo, v, duracion]) => {
-        const osc = this.ctx.createOscillator();
-        osc.frequency.value = frecuencia * multiplo;
-        const env = this.ctx.createGain();
-        env.gain.setValueAtTime(0.0001, t);
-        env.gain.exponentialRampToValueAtTime(v, t + 0.005);
-        env.gain.exponentialRampToValueAtTime(0.0001, t + duracion);
-        osc.connect(env).connect(this.salida);
-        osc.start(t);
-        osc.stop(t + duracion + 0.05);
-      });
-    },
-
-    /** Cada color es un semitono: la tríada suena como tres notas a cuatro semitonos. */
-    triada(indice) {
-      [0, 4, 8].forEach((semitonos, k) => {
-        this.nota(440 * Math.pow(2, (indice + semitonos) / 12), 0.02 + k * 0.11, 0.11);
-      });
-    },
   };
+  const rgbAHex = (rgb) => '#' + rgb.map((v) => Math.round(v).toString(16).padStart(2, '0')).join('').toUpperCase();
+
+  function rgbAHsl([r, g, b]) {
+    r /= 255; g /= 255; b /= 255;
+    const max = Math.max(r, g, b);
+    const min = Math.min(r, g, b);
+    const l = (max + min) / 2;
+    let h = 0;
+    let s = 0;
+    if (max !== min) {
+      const d = max - min;
+      s = l > 0.5 ? d / (2 - max - min) : d / (max + min);
+      if (max === r) h = (g - b) / d + (g < b ? 6 : 0);
+      else if (max === g) h = (b - r) / d + 2;
+      else h = (r - g) / d + 4;
+      h *= 60;
+    }
+    return [Math.round(h), Math.round(s * 100), Math.round(l * 100)];
+  }
+
+  /** Mezcla dos colores: t = 0 → a, t = 1 → b. */
+  function mezclar(a, b, t) {
+    const x = hexARgb(a);
+    const y = hexARgb(b);
+    return rgbAHex(x.map((v, k) => v + (y[k] - v) * t));
+  }
+
+  /** Luminancia relativa (WCAG). */
+  function luminancia(hex) {
+    const [r, g, b] = hexARgb(hex).map((v) => {
+      const c = v / 255;
+      return c <= 0.03928 ? c / 12.92 : Math.pow((c + 0.055) / 1.055, 2.4);
+    });
+    return 0.2126 * r + 0.7152 * g + 0.0722 * b;
+  }
+
+  function contraste(a, b) {
+    const la = luminancia(a);
+    const lb = luminancia(b);
+    return (Math.max(la, lb) + 0.05) / (Math.min(la, lb) + 0.05);
+  }
+
+  /** Color de texto que mejor se lee sobre "hex" (blanco o casi negro) y su contraste. */
+  function textoSobre(hex) {
+    const conBlanco = contraste(hex, '#FFFFFF');
+    const conOscuro = contraste(hex, OSCURO);
+    return conBlanco >= conOscuro ? { color: '#FFFFFF', ratio: conBlanco } : { color: OSCURO, ratio: conOscuro };
+  }
+
+  /** Cinco tonos: dos más claros, el color y dos más oscuros. */
+  function tonosDe(hex) {
+    return [mezclar(hex, '#FFFFFF', 0.7), mezclar(hex, '#FFFFFF', 0.4), hex, mezclar(hex, '#000000', 0.25), mezclar(hex, '#000000', 0.5)];
+  }
+
+  function formatear(hex, formato) {
+    const rgb = hexARgb(hex);
+    if (formato === 'rgb') return `rgb(${rgb.join(', ')})`;
+    if (formato === 'hsl') {
+      const [h, s, l] = rgbAHsl(rgb);
+      return `hsl(${h}, ${s}%, ${l}%)`;
+    }
+    return hex;
+  }
+
+  const coloresDeArmonia = (indice, modo) => ARMONIAS[modo].pasos.map((p) => mod(indice + p, TOTAL));
 
   /* ------------------------------------------------------------------------
-     6. Dibujo del plato (SVG)
+     5. Dibujo de la rueda
      ------------------------------------------------------------------------ */
 
-  /** Sector anular: un color de la rueda. */
-  function rutaSector(indice, ri, re) {
-    const a0 = indice * PASO - PASO / 2;
-    const a1 = indice * PASO + PASO / 2;
-    const [x0, y0] = polar(re, a0);
-    const [x1, y1] = polar(re, a1);
-    const [x2, y2] = polar(ri, a1);
-    const [x3, y3] = polar(ri, a0);
-    return `M${x0} ${y0}A${re} ${re} 0 0 1 ${x1} ${y1}L${x2} ${y2}A${ri} ${ri} 0 0 0 ${x3} ${y3}Z`;
+  /**
+   * Sector de anillo con esquinas redondeadas y hueco constante entre
+   * sectores. Se usa para los colores y para el velo de la armonía.
+   */
+  function rutaSector(i) {
+    const { exterior: re, interior: ri, hueco, esquina: c } = GEO;
+    const a = i * PASO - PASO / 2;
+    const b = i * PASO + PASO / 2;
+    const desvio = (r) => (Math.asin(hueco / 2 / r) * 180) / Math.PI;   // hueco paralelo al radio
+    const arco = (r) => ((c / r) * 180) / Math.PI;                       // lo que ocupa la esquina en el arco
+    const p = (r, g) => polar(r, g).join(' ');
+
+    return [
+      `M${p(re, a + desvio(re) + arco(re))}`,
+      `A${re} ${re} 0 0 1 ${p(re, b - desvio(re) - arco(re))}`,
+      `Q${p(re, b - desvio(re))} ${p(re - c, b - desvio(re - c))}`,
+      `L${p(ri + c, b - desvio(ri + c))}`,
+      `Q${p(ri, b - desvio(ri))} ${p(ri, b - desvio(ri) - arco(ri))}`,
+      `A${ri} ${ri} 0 0 0 ${p(ri, a + desvio(ri) + arco(ri))}`,
+      `Q${p(ri, a + desvio(ri))} ${p(ri + c, a + desvio(ri + c))}`,
+      `L${p(re - c, a + desvio(re - c))}`,
+      `Q${p(re, a + desvio(re))} ${p(re, a + desvio(re) + arco(re))}Z`,
+    ].join('');
   }
 
-  /** Anillo completo (para el grano y los filetes). */
-  function rutaAnillo(ri, re) {
-    return `M0 ${-re}A${re} ${re} 0 1 1 0 ${re}A${re} ${re} 0 1 1 0 ${-re}Z` +
-           `M0 ${-ri}A${ri} ${ri} 0 1 0 0 ${ri}A${ri} ${ri} 0 1 0 0 ${-ri}Z`;
-  }
+  const segmentos = [];
 
-  /** Centroide del sector: punto sobre el que crece cada color resaltado. */
-  function centroSector(indice) {
-    const ri = GEO.interior;
-    const re = GEO.exterior;
-    const mitad = ((PASO / 2) * Math.PI) / 180;
-    const radio = (2 / 3) * ((re ** 3 - ri ** 3) / (re ** 2 - ri ** 2)) * (Math.sin(mitad) / mitad);
-    return polar(radio, indice * PASO);
-  }
-
-  function construirRueda() {
-    const svg = crearSVG('svg', { viewBox: '-200 -200 400 400', role: 'none', focusable: 'false' });
-
-    const defs = crearSVG('defs');
-    defs.innerHTML =
-      // Sombra suave sin desplazamiento (se ve igual con el plato girado)
-      '<filter id="sombra-realce" x="-40%" y="-40%" width="180%" height="180%" color-interpolation-filters="sRGB">' +
-        '<feDropShadow dx="0" dy="0" stdDeviation="4.5" flood-color="#3B2A20" flood-opacity="0.35"/>' +
-      '</filter>' +
-      // Grano de pigmento: motas irregulares, como un esmalte pintado a mano
-      '<filter id="filtro-grano" x="0" y="0" width="100%" height="100%">' +
-        '<feTurbulence type="fractalNoise" baseFrequency="0.85" numOctaves="2" seed="11" result="ruido"/>' +
-        '<feColorMatrix in="ruido" type="matrix" values="0 0 0 0 0.25  0 0 0 0 0.17  0 0 0 0 0.1  1.4 0 0 0 -0.62" result="motas"/>' +
-        '<feComposite in="motas" in2="SourceGraphic" operator="in"/>' +
-      '</filter>';
-    svg.append(defs);
-
-    // Arcos sobre los que se escriben los nombres
-    COLORES.forEach((_, i) => {
-      const [x0, y0] = polar(GEO.nombre, i * PASO - PASO / 2);
-      const [x1, y1] = polar(GEO.nombre, i * PASO + PASO / 2);
-      defs.append(crearSVG('path', {
-        id: `arco-${i}`,
-        d: `M${x0} ${y0}A${GEO.nombre} ${GEO.nombre} 0 0 1 ${x1} ${y1}`,
-      }));
-    });
-
-    // ---- Grabados del ala del plato: filetes, graduación cada 6° y nombres ----
-    const grabados = crearSVG('g', { class: 'grabados', 'aria-hidden': 'true' });
-    grabados.append(
-      crearSVG('circle', { class: 'filete', r: GEO.fileteExterior, 'stroke-width': 0.8 }),
-      crearSVG('circle', { class: 'filete', r: GEO.fileteInterior, 'stroke-width': 0.5 })
-    );
-    for (let g = 0; g < 360; g += 6) {
-      const limite = mod(g - PASO / 2, PASO) === 0;
-      const [x0, y0] = polar(limite ? GEO.marcaLarga : GEO.marcaCorta, g);
-      const [x1, y1] = polar(GEO.fileteExterior, g);
-      grabados.append(crearSVG('line', { class: limite ? 'marca marca--larga' : 'marca', x1: x0, y1: y0, x2: x1, y2: y1 }));
-    }
-    COLORES.forEach((color, i) => {
-      const texto = crearSVG('text', { class: 'rotulo' });
-      const camino = crearSVG('textPath', { href: `#arco-${i}`, startOffset: '50%', 'text-anchor': 'middle' });
-      camino.setAttributeNS(XLINK_NS, 'xlink:href', `#arco-${i}`);
-      camino.textContent = color.nombre;
-      texto.append(camino);
-      grabados.append(texto);
-      rotulos.push(texto);
-    });
-    svg.append(grabados);
-
-    // ---- Colores (opciones accesibles del listbox) ----
-    const grupoSegmentos = crearSVG('g', { class: 'segmentos', role: 'none' });
+  function construirAnillo() {
+    const svg = crearSVG('svg', { class: 'rueda__anillo', viewBox: '-120 -120 240 240', role: 'none', focusable: 'false' });
     COLORES.forEach((color, i) => {
       const segmento = crearSVG('path', {
-        d: rutaSector(i, GEO.interior, GEO.exterior),
-        fill: color.hex,
         class: 'segmento',
+        d: rutaSector(i),
+        fill: color.hex,
         id: `color-${i}`,
         role: 'option',
         'aria-selected': 'false',
         'aria-label': `${color.nombre}, ${color.categoria}`,
         'data-indice': i,
       });
-      const titulo = crearSVG('title');
-      titulo.textContent = `${color.nombre} (${color.categoria})`;
+      const titulo = crearSVG('title', {});
+      titulo.textContent = color.nombre;
       segmento.append(titulo);
-      grupoSegmentos.append(segmento);
+      svg.append(segmento);
       segmentos.push(segmento);
     });
-    svg.append(grupoSegmentos);
-
-    // Grano del esmalte sobre todos los colores
-    svg.append(crearSVG('path', {
-      class: 'grano', d: rutaAnillo(GEO.interior, GEO.exterior), 'fill-rule': 'evenodd', filter: 'url(#filtro-grano)',
-    }));
-
-    // ---- Filetes dorados finos entre colores y en los bordes del anillo ----
-    const lineas = [];
-    for (let i = 0; i < TOTAL; i++) {
-      const [x0, y0] = polar(GEO.interior, i * PASO + PASO / 2);
-      const [x1, y1] = polar(GEO.exterior, i * PASO + PASO / 2);
-      lineas.push(`M${x0} ${y0}L${x1} ${y1}`);
-    }
-    svg.append(crearSVG('path', {
-      class: 'filetes filete', d: lineas.join('') + rutaAnillo(GEO.interior, GEO.exterior), 'stroke-width': 1,
-    }));
-
-    // ---- Disco central con doble filete ----
-    const centro = crearSVG('g', { class: 'centro', 'aria-hidden': 'true' });
-    centro.append(
-      crearSVG('circle', { class: 'centro__disco', r: GEO.centro }),
-      crearSVG('circle', { class: 'filete', r: GEO.centro, 'stroke-width': 1 }),
-      crearSVG('circle', { class: 'filete', r: GEO.centro - 4, 'stroke-width': 0.5 })
-    );
-    svg.append(centro);
-
-    // ---- Copias elevadas de la tríada ----
-    const grupoRealces = crearSVG('g', { class: 'realces', filter: 'url(#sombra-realce)', 'aria-hidden': 'true' });
-    COLORES.forEach((color, i) => {
-      const d = rutaSector(i, GEO.interior, GEO.exterior);
-      const realce = crearSVG('g', { class: 'realce' });
-      const [cx, cy] = centroSector(i);
-      realce.style.transformOrigin = `${cx}px ${cy}px`;
-      realce.append(
-        crearSVG('path', { d, fill: color.hex }),
-        crearSVG('path', { d, 'fill-rule': 'evenodd', filter: 'url(#filtro-grano)', class: 'grano' }),
-        crearSVG('path', { d, class: 'realce__borde' })
-      );
-      grupoRealces.append(realce);
-      realces.push(realce);
-    });
-    svg.append(grupoRealces);
-
-    // ---- Triángulos: punteado (vista previa) y dorado (tríada elegida) ----
-    const puntos = [0, 120, 240].map((a) => polar(GEO.triangulo, a));
-    const dTriangulo = `M${puntos[0].join(' ')}L${puntos[1].join(' ')}L${puntos[2].join(' ')}Z`;
-
-    fantasma = crearSVG('g', { class: 'fantasma', 'aria-hidden': 'true' });
-    fantasma.append(crearSVG('path', { d: dTriangulo }));
-    svg.append(fantasma);
-
-    triangulo = crearSVG('g', { class: 'triangulo', 'aria-hidden': 'true' });
-    trazoTriangulo = crearSVG('path', { class: 'triangulo__trazo', d: dTriangulo, pathLength: 1 });
-    triangulo.append(trazoTriangulo);
-    puntos.forEach(([x, y]) => {
-      const vertice = crearSVG('circle', { class: 'triangulo__vertice', cx: x, cy: y, r: 5 });
-      triangulo.append(vertice);
-      vertices.push(vertice);
-    });
-    svg.append(triangulo);
-
-    rotor.append(svg);
+    rotor.prepend(svg);
   }
 
   /**
-   * Si un nombre no cabe en su tramo del ala del plato (por ejemplo, mientras
-   * carga la tipografía o con una fuente de reserva más ancha), se reduce.
+   * Capa de la armonía para el modo actual, dibujada con el color elegido en
+   * 0°. Es una figura fija: al cambiar de color solo se gira con transform.
    */
-  function ajustarRotulos() {
-    const disponible = ((2 * Math.PI * GEO.nombre * PASO) / 360) * 0.9;
-    rotulos.forEach((texto) => {
-      texto.style.fontSize = '';
-      const largo = texto.getComputedTextLength();
-      const tamano = parseFloat(getComputedStyle(texto).fontSize) || 12.5;
-      if (largo > disponible) texto.style.fontSize = `${((tamano * disponible) / largo).toFixed(2)}px`;
-    });
-  }
+  function construirCapa() {
+    const pasos = ARMONIAS[estado.modo].pasos;
+    const svg = crearSVG('svg', { viewBox: '-120 -120 240 240', focusable: 'false' });
 
-  /* ------------------------------------------------------------------------
-     7. Bucle de animación: giro con física y oscilación del colgante
-     ------------------------------------------------------------------------ */
-  let idCuadro = 0;
-  let ultimoCuadro = 0;
+    // Velo sobre los colores que no forman parte de la armonía
+    const velo = [];
+    for (let i = 0; i < TOTAL; i++) if (!pasos.includes(i)) velo.push(rutaSector(i));
+    svg.append(crearSVG('path', { class: 'velo', d: velo.join('') }));
 
-  function despertar() {
-    if (idCuadro) return;
-    ultimoCuadro = performance.now();
-    idCuadro = requestAnimationFrame(bucle);
-  }
+    // Marcadores: anillos blancos huecos (dejan ver el color); el del color elegido, mayor
+    const radioMarcador = (p) => (p === 0 ? 8.5 : 6.5);
+    const vertices = [...pasos].sort((x, y) => x - y).map((p) => ({ punto: polar(GEO.marcador, p * PASO), r: radioMarcador(p) }));
 
-  function bucle(ahora) {
-    const dt = Math.min(48, Math.max(0, ahora - ultimoCuadro));
-    ultimoCuadro = ahora;
-    const girando = pasoGiro(dt, ahora);
-    const oscilando = pasoColgante(dt);
-    idCuadro = girando || oscilando ? requestAnimationFrame(bucle) : 0;
-  }
-
-  function pasoGiro(dt, ahora) {
-    if (giro.modo === 'muelle') {
-      // Muelle amortiguado hacia el color objetivo, en subpasos de 8 ms
-      let resto = dt;
-      while (resto > 0) {
-        const h = Math.min(8, resto);
-        resto -= h;
-        const a = MUELLE.w * MUELLE.w * (giro.objetivo - giro.x) - 2 * MUELLE.z * MUELLE.w * giro.v;
-        giro.v += a * h;
-        giro.x += giro.v * h;
-      }
-      if (Math.abs(giro.objetivo - giro.x) < 0.02 && Math.abs(giro.v) < 0.0008) {
-        giro.x = giro.objetivo;
-        giro.v = 0;
-        giro.modo = 'reposo';
-      }
-      pintarGiro();
-      return giro.modo !== 'reposo';
+    // Polígono que une los colores: cada lado se recorta en el borde de los marcadores
+    const lados = [];
+    const cerrado = vertices.length > 2;
+    for (let k = 0; k < (cerrado ? vertices.length : vertices.length - 1); k++) {
+      const a = vertices[k];
+      const b = vertices[(k + 1) % vertices.length];
+      const dx = b.punto[0] - a.punto[0];
+      const dy = b.punto[1] - a.punto[1];
+      const largo = Math.hypot(dx, dy);
+      const ux = dx / largo;
+      const uy = dy / largo;
+      const ra = a.r + 1.3;
+      const rb = b.r + 1.3;
+      lados.push(`M${redondear(a.punto[0] + ux * ra)} ${redondear(a.punto[1] + uy * ra)}` +
+                 `L${redondear(b.punto[0] - ux * rb)} ${redondear(b.punto[1] - uy * rb)}`);
     }
-
-    if (giro.modo === 'entrada') {
-      // Giro de presentación al cargar la página (frena en cuartica)
-      const e = giro.entrada;
-      const t = limitar((ahora - e.inicio) / e.duracion, 0, 1);
-      const anterior = giro.x;
-      giro.x = e.desde + (e.hasta - e.desde) * (1 - Math.pow(1 - t, 4));
-      giro.v = dt > 0 ? (giro.x - anterior) / dt : 0;
-      if (t >= 1) {
-        giro.modo = 'reposo';
-        giro.v = 0;
-        giro.objetivo = e.hasta;
-        e.alTerminar();
-      }
-      pintarGiro();
-      return giro.modo !== 'reposo';
-    }
-
-    return false;   // en reposo o arrastrando (el arrastre pinta en pointermove)
-  }
-
-  /** Aplica el giro y detecta cada filete que pasa bajo el colgante. */
-  function pintarGiro() {
-    rotor.style.transform = `rotate(${giro.x}deg)`;
-    const tramo = Math.floor((giro.x + PASO / 2) / PASO);
-    if (tramo !== giro.tramo) {
-      const sentido = Math.sign(tramo - giro.tramo);
-      giro.tramo = tramo;
-      alPasarColor(sentido);
-    }
-    actualizarCandidato();
-  }
-
-  function alPasarColor(sentido) {
-    if (sinMovimiento()) return;
-    const rapidez = Math.abs(giro.v);
-    // El filete empuja la punta del colgante en el sentido del giro
-    colgante.v += -sentido * limitar(0.18 + rapidez * 0.3, 0.18, 0.5);
-    sonido.clic(limitar(0.35 + rapidez * 0.45, 0.35, 1));
-    if (estado.tactil && navigator.vibrate) {
-      try { navigator.vibrate(4); } catch (_) { /* sin vibración */ }
-    }
-    despertar();
-  }
-
-  function pasoColgante(dt) {
-    if (colgante.x === 0 && colgante.v === 0) return false;
-    let resto = dt;
-    while (resto > 0) {
-      const h = Math.min(8, resto);
-      resto -= h;
-      const a = -COLGANTE.w * COLGANTE.w * colgante.x - 2 * COLGANTE.z * COLGANTE.w * colgante.v;
-      colgante.v += a * h;
-      colgante.x = limitar(colgante.x + colgante.v * h, -20, 20);
-    }
-    if (Math.abs(colgante.x) < 0.03 && Math.abs(colgante.v) < 0.001) {
-      colgante.x = 0;
-      colgante.v = 0;
-    }
-    colganteSvg.style.transform = `rotate(${colgante.x.toFixed(2)}deg)`;
-    return colgante.x !== 0 || colgante.v !== 0;
-  }
-
-  /** Lleva el plato a "destino" con el muelle, partiendo de "velocidad". */
-  function moverConMuelle(destino, velocidad) {
-    giro.objetivo = destino;
-    if (sinMovimiento()) {
-      giro.x = destino;
-      giro.v = 0;
-      giro.modo = 'reposo';
-      pintarGiro();
-      return;
-    }
-    giro.v = velocidad;
-    giro.modo = 'muelle';
-    despertar();
-  }
-
-  /** Ángulo en el que acabará el plato (para el teclado durante un giro). */
-  function destinoActual() {
-    if (giro.modo === 'muelle') return giro.objetivo;
-    if (giro.modo === 'entrada') return giro.entrada.hasta;
-    return Math.round(giro.x / PASO) * PASO;
-  }
-
-  /** Color bajo el colgante: gema del colgante, foco accesible y vista previa al arrastrar. */
-  function actualizarCandidato() {
-    const indice = indiceEnColgante(giro.x);
-    if (indice === estado.candidato) return;
-    estado.candidato = indice;
-    colganteColor.setAttribute('fill', COLORES[indice].hex);
-    rueda.setAttribute('aria-activedescendant', `color-${indice}`);
-    if (arrastre && arrastre.movido) mostrarFantasma(indice);
-  }
-
-  /* ------------------------------------------------------------------------
-     8. Selección y tríada
-     ------------------------------------------------------------------------ */
-  function seleccionar(indice, opciones) {
-    const { animar = true, anunciar = true } = opciones || {};
-    if (indice === estado.seleccionado) return;
-    estado.seleccionado = indice;
-
-    const triada = triadaDe(indice);
-    pagina.classList.add('con-seleccion');
-
-    segmentos.forEach((segmento, i) => {
-      const enTriada = triada.includes(i);
-      segmento.classList.toggle('en-triada', enTriada);
-      segmento.setAttribute('aria-selected', String(i === indice));
-      realces[i].classList.toggle('activo', enTriada);
-      realces[i].classList.toggle('principal', i === indice);
-      rotulos[i].classList.toggle('en-triada', enTriada);
-    });
-
-    girarTriangulo(indice);
-    ocultarFantasma();
-    if (animar && !sinMovimiento() && typeof trazoTriangulo.animate === 'function') {
-      // El triángulo se dibuja de nuevo: muestra qué ha cambiado
-      trazoTriangulo.animate(
-        [{ strokeDashoffset: 1 }, { strokeDashoffset: 0 }],
-        { duration: 650, easing: 'cubic-bezier(.65, 0, .35, 1)' }
-      );
-    }
-
-    escribirLectura(triada, animar);
-    actualizarTarjetas(triada, animar);
-
-    if (animar) sonido.triada(indice);
-    if (anunciar) {
-      const nombres = triada.map((i) => COLORES[i].nombre.toLowerCase());
-      anunciador.textContent =
-        `${COLORES[indice].nombre} seleccionado. ${NOMBRE_TRIADA[COLORES[indice].categoria]}: ${enumerar(nombres)}.`;
-    }
-  }
-
-  /** Ángulo equivalente más cercano: el triángulo se repite cada 120°. */
-  function anguloCercano(actual, indice) {
-    return actual + mod(indice * PASO - actual + 60, 120) - 60;
-  }
-
-  function girarTriangulo(indice) {
-    estado.anguloTriangulo = anguloCercano(estado.anguloTriangulo, indice);
-    triangulo.style.transform = `rotate(${estado.anguloTriangulo}deg)`;
-    // Cada vértice toma el color al que apunta
-    vertices.forEach((vertice, k) => {
-      const i = mod(Math.round((estado.anguloTriangulo + k * 120) / PASO), TOTAL);
-      vertice.style.fill = COLORES[i].hex;
-    });
-  }
-
-  function mostrarFantasma(indice) {
-    if (estado.seleccionado >= 0 && triadaDe(estado.seleccionado).includes(indice)) {
-      ocultarFantasma();
-      return;
-    }
-    estado.anguloFantasma = anguloCercano(estado.anguloFantasma, indice);
-    fantasma.style.transform = `rotate(${estado.anguloFantasma}deg)`;
-    fantasma.classList.add('visible');
-  }
-
-  function ocultarFantasma() {
-    if (fantasma) fantasma.classList.remove('visible');
-  }
-
-  /** Toque en un color: se elige y el plato lo lleva bajo el colgante. */
-  function elegirSegmento(indice) {
-    moverConMuelle(giro.x + normalizar(-indice * PASO - giro.x), 0);
-    seleccionar(indice);
-  }
-
-  /** Texto de la lámina: nombre de la tríada, sus colores y cómo usarla. */
-  function escribirLectura(triada, animar) {
-    const [a, b, c] = triada.map((i) => COLORES[i].nombre.toLowerCase());
-    tituloTriada.textContent = NOMBRE_TRIADA[COLORES[triada[0]].categoria];
-    coloresTriada.textContent = capitalizar(enumerar([a, b, c]));
-    consejoTriada.textContent =
-      `Tres colores a 120° entre sí. En una cocina funcionan si uno manda y los otros acompañan: ` +
-      `${a} en lo grande, ${b} en los textiles y ${c} en los detalles.`;
-
-    if (animar && !sinMovimiento()) {
-      bloqueTriada.classList.remove('renovando');
-      void bloqueTriada.offsetWidth;   // reinicia la animación
-      bloqueTriada.classList.add('renovando');
-    }
-  }
-
-  /* ------------------------------------------------------------------------
-     9. Tarjetas y portapapeles
-     ------------------------------------------------------------------------ */
-  let turnoTarjetas = 0;   // evita que un cambio viejo pise a uno nuevo
-  const POSICION = ['Tu color', 'A 120°', 'A 240°'];
-
-  function crearTarjetas() {
-    const plantilla = document.getElementById('plantilla-tarjeta');
-    for (let p = 0; p < 3; p++) {
-      const tarjeta = plantilla.content.firstElementChild.cloneNode(true);
-      tarjeta.dataset.posicion = p;
-      if (p === 0) tarjeta.classList.add('tarjeta--principal');
-      tarjeta.addEventListener('click', () => copiarTarjeta(tarjeta));
-      contenedorTarjetas.append(tarjeta);
-      tarjetas.push(tarjeta);
-    }
-  }
-
-  function rellenarTarjeta(tarjeta, indice, posicion) {
-    const color = COLORES[indice];
-    const [r, g, b] = hexARgb(color.hex);
-    tarjeta.dataset.hex = color.hex;
-    tarjeta.style.setProperty('--muestra', color.hex);
-    tarjeta.querySelector('.tarjeta__nombre').textContent = color.nombre;
-    tarjeta.querySelector('.tarjeta__categoria').textContent = capitalizar(color.categoria);
-    tarjeta.querySelector('.tarjeta__hex').textContent = color.hex;
-    tarjeta.querySelector('.tarjeta__rgb').textContent = `RGB ${r} ${g} ${b}`;
-    tarjeta.querySelector('.tarjeta__grados').textContent = `${indice * PASO}°`;
-    tarjeta.querySelector('.tarjeta__accion').textContent = 'Copiar';
-    tarjeta.classList.remove('copiada');
-    tarjeta.setAttribute(
-      'aria-label',
-      `${POSICION[posicion]}: ${color.nombre}, ${color.categoria}, ${color.hex}. Copiar código HEX`
+    const d = lados.join('');
+    svg.append(
+      crearSVG('path', { class: 'poligono poligono--halo', d }),
+      crearSVG('path', { class: 'poligono poligono--linea', d })
     );
+
+    pasos.forEach((p) => {
+      const [cx, cy] = polar(GEO.marcador, p * PASO);
+      const r = radioMarcador(p);
+      svg.append(
+        crearSVG('circle', { class: 'marcador marcador--halo', cx, cy, r }),
+        crearSVG('circle', { class: 'marcador marcador--anillo', cx, cy, r })
+      );
+    });
+
+    capa.replaceChildren(svg);
   }
 
-  function actualizarTarjetas(triada, animar) {
-    const turno = ++turnoTarjetas;
-    tarjetas.forEach((tarjeta, posicion) => {
-      const texto = tarjeta.querySelector('.tarjeta__texto');
-      if (texto.getAnimations) texto.getAnimations().forEach((a) => a.cancel());
+  /** Gira la capa de armonía hasta el color "i" por el camino más corto. */
+  function girarCapa(i) {
+    estado.anguloCapa = cercano(estado.anguloCapa, i * PASO, ARMONIAS[estado.modo].periodo);
+    capa.style.transform = `rotate(${estado.anguloCapa}deg)`;
+  }
 
-      if (!animar || sinMovimiento() || typeof texto.animate !== 'function') {
-        rellenarTarjeta(tarjeta, triada[posicion], posicion);
-        return;
-      }
-      // La muestra cambia de color con su transición CSS; el texto se funde
-      tarjeta.style.setProperty('--muestra', COLORES[triada[posicion]].hex);
-      const salida = texto.animate([{ opacity: 1 }, { opacity: 0 }], { duration: 150, fill: 'forwards' });
-      salida.finished
-        .then(() => {
-          if (turno !== turnoTarjetas) return;
-          rellenarTarjeta(tarjeta, triada[posicion], posicion);
-          texto.animate([{ opacity: 0 }, { opacity: 1 }], { duration: 280, easing: 'ease-out' });
-          salida.cancel();
-        })
-        .catch(() => { /* cancelada por un cambio más reciente */ });
+  /* ------------------------------------------------------------------------
+     6. Movimiento de la rueda
+     ------------------------------------------------------------------------ */
+  function fijarAngulo(x) {
+    mov.x = x;
+    rotor.style.transform = `rotate(${x}deg)`;
+  }
+
+  /** Ángulo de una trayectoria [[t, x], …] en el instante t (interpolación lineal). */
+  function anguloEn(puntos, t) {
+    if (t <= 0) return puntos[0][1];
+    const n = puntos.length;
+    if (t >= puntos[n - 1][0]) return puntos[n - 1][1];
+    let bajo = 0;
+    let alto = n - 1;
+    while (alto - bajo > 1) {
+      const medio = (bajo + alto) >> 1;
+      if (puntos[medio][0] <= t) bajo = medio; else alto = medio;
+    }
+    const [t0, x0] = puntos[bajo];
+    const [t1, x1] = puntos[alto];
+    return x0 + ((x1 - x0) * (t - t0)) / (t1 - t0 || 1);
+  }
+
+  function tiempoActual() {
+    return mov.anim ? Number(mov.anim.currentTime) || 0 : 0;
+  }
+
+  function anguloActual() {
+    return mov.anim ? anguloEn(mov.puntos, tiempoActual()) : mov.x;
+  }
+
+  function velocidadActual() {
+    if (!mov.anim) return 0;
+    const t = tiempoActual();
+    return (anguloEn(mov.puntos, t + 8) - anguloEn(mov.puntos, t - 8)) / 16;
+  }
+
+  /** Detiene la animación en curso dejando la rueda donde está. */
+  function detener() {
+    if (!mov.anim) return;
+    const x = anguloActual();
+    mov.anim.cancel();
+    mov.anim = null;
+    fijarAngulo(x);
+  }
+
+  /** Trayectoria de un muelle amortiguado de x0 a x1 con velocidad inicial v0 (°/ms). */
+  function trayectoriaMuelle(x0, v0, x1) {
+    const { w, z } = MUELLE;
+    const h = 4;
+    let x = x0;
+    let v = v0;
+    let t = 0;
+    const puntos = [[0, x0]];
+    for (let paso = 1; t < 5000; paso++) {
+      const a = w * w * (x1 - x) - 2 * z * w * v;
+      v += a * h;
+      x += v * h;
+      t += h;
+      if (paso % 4 === 0) puntos.push([t, x]);
+      if (Math.abs(x1 - x) < 0.015 && Math.abs(v) < 0.0006) break;
+    }
+    puntos.push([t + 16, x1]);
+    return puntos;
+  }
+
+  /** Trayectoria con una curva de aceleración, muestreada cada 16 ms. */
+  function trayectoriaCurva(x0, x1, duracion, curva) {
+    const n = Math.max(2, Math.round(duracion / 16));
+    const puntos = [];
+    for (let k = 0; k <= n; k++) puntos.push([(duracion * k) / n, x0 + (x1 - x0) * curva(k / n)]);
+    return puntos;
+  }
+
+  const salidaCuarta = (t) => 1 - Math.pow(1 - t, 4);
+  const salidaCubica = (t) => 1 - Math.pow(1 - t, 3);
+
+  /** Reproduce una trayectoria en el compositor con Web Animations. */
+  function reproducir(puntos) {
+    const final = puntos[puntos.length - 1][1];
+    const duracion = puntos[puntos.length - 1][0];
+    if (mov.anim) {
+      mov.anim.cancel();
+      mov.anim = null;
+    }
+    mov.destino = final;
+    if (sinMovimiento() || duracion < 20 || typeof rotor.animate !== 'function') {
+      fijarAngulo(final);
+      return;
+    }
+    const fotogramas = puntos.map(([t, x]) => ({ transform: `rotate(${x}deg)`, offset: t / duracion }));
+    const anim = rotor.animate(fotogramas, { duration: duracion, easing: 'linear', fill: 'forwards' });
+    mov.anim = anim;
+    mov.puntos = puntos;
+    anim.finished
+      .then(() => {
+        if (mov.anim !== anim) return;
+        fijarAngulo(final);
+        anim.cancel();
+        mov.anim = null;
+      })
+      .catch(() => { /* interrumpida por otra animación o por la mano */ });
+  }
+
+  /** Lleva el color "i" bajo el puntero por el camino más corto. */
+  function irAColor(i, velocidad) {
+    const x = anguloActual();
+    reproducir(trayectoriaMuelle(x, velocidad || 0, x + normalizar(-i * PASO - x)));
+  }
+
+  /* ------------------------------------------------------------------------
+     7. Vista (lo que señala el puntero) y selección
+     ------------------------------------------------------------------------ */
+
+  /** Muestra un color en el centro, en la lectura y en la capa de armonía. */
+  function mostrarVista(i) {
+    if (i === estado.vista) return;
+    estado.vista = i;
+    const color = COLORES[i];
+    centro.style.backgroundColor = color.hex;
+    lecturaNombre.textContent = color.nombre;
+    lecturaHex.textContent = color.hex;
+    lecturaTipo.textContent = capitalizar(color.categoria);
+    lecturaGrados.textContent = `${i * PASO}°`;
+    rueda.setAttribute('aria-activedescendant', `color-${i}`);
+    girarCapa(i);
+  }
+
+  /** Confirma un color: paleta, enlace y anuncio para lectores de pantalla. */
+  function seleccionar(i, opciones) {
+    const { anunciar = true } = opciones || {};
+    const cambia = i !== estado.seleccionado;
+    segmentos[estado.seleccionado].setAttribute('aria-selected', 'false');
+    segmentos[i].setAttribute('aria-selected', 'true');
+    estado.seleccionado = i;
+    mostrarVista(i);
+    pintarPanel(false);
+    guardarEnEnlace();
+    if (cambia && estado.tactil && navigator.vibrate) {
+      try { navigator.vibrate(8); } catch (_) { /* sin vibración */ }
+    }
+    if (anunciar) {
+      const nombres = coloresDeArmonia(i, estado.modo).map((k) => COLORES[k].nombre.toLowerCase());
+      anunciador.textContent = `${COLORES[i].nombre}. ${tituloDeArmonia()}: ${enumerar(nombres)}.`;
+    }
+  }
+
+  const enumerar = (lista) => (lista.length > 1 ? `${lista.slice(0, -1).join(', ')} y ${lista[lista.length - 1]}` : lista[0]);
+
+  function tituloDeArmonia() {
+    if (estado.modo === 'triada') return NOMBRE_TRIADA[COLORES[estado.seleccionado].categoria];
+    return ARMONIAS[estado.modo].nombre;
+  }
+
+  /* ------------------------------------------------------------------------
+     8. Panel: título, muestras y tonos
+     ------------------------------------------------------------------------ */
+  function etiquetaPosicion(paso) {
+    if (paso === 0) return 'Tu color';
+    const grados = normalizar(paso * PASO);
+    return `${grados > 0 ? '+' : '−'}${Math.abs(grados)}°`;
+  }
+
+  /** Crea las muestras del modo actual (solo cuando cambia el número de colores). */
+  function crearMuestras() {
+    const pasos = ARMONIAS[estado.modo].pasos;
+    listaMuestras.style.setProperty('--n', pasos.length);
+    listaMuestras.replaceChildren(...pasos.map((paso, k) => {
+      const li = document.createElement('li');
+      li.className = 'muestra';
+      li.style.setProperty('--i', k);
+      li.innerHTML =
+        '<button class="muestra__bloque" type="button">' +
+          '<span class="muestra__cabeza"><span class="muestra__posicion"></span><span class="muestra__contraste"></span></span>' +
+          '<span class="muestra__pie"><span class="muestra__nombre"></span><span class="muestra__valor"></span></span>' +
+        '</button>' +
+        '<div class="muestra__tonos" role="group">' + '<button class="tono" type="button"></button>'.repeat(5) + '</div>';
+      li.querySelector('.muestra__posicion').textContent = etiquetaPosicion(paso);
+      return li;
+    }));
+  }
+
+  /** Rellena las muestras con los colores de la armonía actual. */
+  function pintarPanel(recrear) {
+    const indices = coloresDeArmonia(estado.seleccionado, estado.modo);
+    if (recrear || listaMuestras.children.length !== indices.length) crearMuestras();
+
+    tituloArmonia.textContent = tituloDeArmonia();
+    textoArmonia.textContent = ARMONIAS[estado.modo].texto;
+
+    indices.forEach((indice, k) => {
+      const li = listaMuestras.children[k];
+      const color = COLORES[indice];
+      const sobre = textoSobre(color.hex);
+      const valor = formatear(color.hex, estado.formato);
+      const bloque = li.querySelector('.muestra__bloque');
+
+      bloque.style.setProperty('--c', color.hex);
+      bloque.style.setProperty('--sobre', sobre.color);
+      bloque.dataset.valor = valor;
+      bloque.dataset.hex = color.hex;
+      bloque.setAttribute('aria-label', `Copiar ${valor}, ${color.nombre}`);
+      li.querySelector('.muestra__nombre').textContent = color.nombre;
+      li.querySelector('.muestra__valor').textContent = valor;
+      const ratio = sobre.ratio.toFixed(1).replace('.', ',');
+      const contrasteEl = li.querySelector('.muestra__contraste');
+      contrasteEl.textContent = `Aa ${ratio}:1`;
+      contrasteEl.title = `Contraste del texto ${sobre.color === '#FFFFFF' ? 'blanco' : 'oscuro'} sobre este color`;
+
+      const grupo = li.querySelector('.muestra__tonos');
+      grupo.setAttribute('aria-label', `Tonos de ${color.nombre}`);
+      const nombresTono = ['muy claro', 'claro', 'base', 'oscuro', 'muy oscuro'];
+      tonosDe(color.hex).forEach((hex, t) => {
+        const boton = grupo.children[t];
+        const valorTono = formatear(hex, estado.formato);
+        boton.style.setProperty('--t', hex);
+        boton.dataset.valor = valorTono;
+        boton.dataset.hex = hex;
+        boton.title = valorTono;
+        boton.setAttribute('aria-label', `Copiar tono ${nombresTono[t]} ${valorTono}`);
+      });
     });
   }
 
-  /** Copia al portapapeles (con alternativa para navegadores antiguos o file://). */
+  /* ------------------------------------------------------------------------
+     9. Copiar, compartir y avisos
+     ------------------------------------------------------------------------ */
   async function copiarTexto(texto) {
     try {
       if (navigator.clipboard && window.isSecureContext) {
@@ -726,151 +601,181 @@
 
   let temporizadorAviso = 0;
   function mostrarAviso(texto, colores) {
-    const nodos = colores.map((hex) => {
-      const muestra = document.createElement('span');
-      muestra.className = 'aviso__muestra';
-      muestra.style.backgroundColor = hex;
-      return muestra;
+    const muestras = document.createElement('span');
+    muestras.className = 'aviso__muestras';
+    (colores || []).forEach((hex) => {
+      const punto = document.createElement('span');
+      punto.className = 'aviso__muestra';
+      punto.style.backgroundColor = hex;
+      muestras.append(punto);
     });
     const mensaje = document.createElement('span');
     mensaje.textContent = texto;
-    aviso.replaceChildren(...nodos, mensaje);
+    aviso.replaceChildren(muestras, mensaje);
     aviso.classList.add('visible');
     clearTimeout(temporizadorAviso);
-    temporizadorAviso = setTimeout(() => aviso.classList.remove('visible'), 1900);
+    temporizadorAviso = setTimeout(() => aviso.classList.remove('visible'), 1800);
   }
 
-  const temporizadoresCopia = new WeakMap();
-  async function copiarTarjeta(tarjeta) {
-    sonido.desbloquear();
-    const hex = tarjeta.dataset.hex;
-    const ok = await copiarTexto(hex);
-    tarjeta.focus({ preventScroll: true });   // el método alternativo mueve el foco
-    if (!ok) {
-      mostrarAviso(`No se pudo copiar. El código es ${hex}`, [hex]);
-      return;
+  /** Copia y avisa; "mensaje" es lo que dice el aviso si sale bien. */
+  async function copiarYAvisar(texto, colores, boton, mensaje) {
+    const ok = await copiarTexto(texto);
+    if (boton) boton.focus({ preventScroll: true });   // el método alternativo mueve el foco
+    mostrarAviso(ok ? mensaje || `${texto} copiado` : `No se pudo copiar: ${texto}`, colores);
+  }
+
+  // Un solo escuchador para todas las muestras y tonos
+  listaMuestras.addEventListener('click', (e) => {
+    const boton = e.target.closest('.muestra__bloque, .tono');
+    if (!boton) return;
+    copiarYAvisar(boton.dataset.valor, [boton.dataset.hex], boton);
+  });
+
+  const hexesDePaleta = () => coloresDeArmonia(estado.seleccionado, estado.modo).map((i) => COLORES[i].hex);
+
+  $('copiar-paleta').addEventListener('click', (e) => {
+    const hexes = hexesDePaleta();
+    copiarYAvisar(hexes.map((h) => formatear(h, estado.formato)).join(', '), hexes, e.currentTarget, 'Paleta copiada');
+  });
+
+  $('copiar-css').addEventListener('click', (e) => {
+    const indices = coloresDeArmonia(estado.seleccionado, estado.modo);
+    const lineas = indices.map((i) => `  --${COLORES[i].slug}: ${formatear(COLORES[i].hex, estado.formato)};`);
+    copiarYAvisar(`:root {\n${lineas.join('\n')}\n}`, hexesDePaleta(), e.currentTarget, 'Variables CSS copiadas');
+  });
+
+  /** El enlace guarda la armonía y el color: #triada-amarillo */
+  function guardarEnEnlace() {
+    try {
+      history.replaceState(null, '', `#${estado.modo}-${COLORES[estado.seleccionado].slug}`);
+    } catch (_) { /* algunos marcos no lo permiten */ }
+  }
+
+  function leerEnlace() {
+    const hash = decodeURIComponent(location.hash.slice(1));
+    const modo = Object.keys(ARMONIAS).find((m) => hash.startsWith(`${m}-`));
+    if (!modo) return null;
+    const indice = COLORES.findIndex((c) => c.slug === hash.slice(modo.length + 1));
+    return indice >= 0 ? { modo, indice } : null;
+  }
+
+  const botonCompartir = $('compartir');
+  // Dentro de un marco (vista previa) el enlace no serviría: se oculta el botón
+  if (window.self !== window.top) botonCompartir.hidden = true;
+  botonCompartir.addEventListener('click', async () => {
+    guardarEnEnlace();
+    const url = location.href;
+    const nombres = coloresDeArmonia(estado.seleccionado, estado.modo).map((i) => COLORES[i].nombre).join(', ');
+    if (navigator.share) {
+      try {
+        await navigator.share({ title: 'Círculo Cromático', text: `${tituloDeArmonia()}: ${nombres}`, url });
+        return;
+      } catch (err) {
+        if (err && err.name === 'AbortError') return;   // el usuario cerró el menú
+      }
     }
-    mostrarAviso(`${hex} copiado`, [hex]);
-    sonido.nota(1318.5, 0.01, 0.07);
-    const accion = tarjeta.querySelector('.tarjeta__accion');
-    accion.textContent = 'Copiado';
-    tarjeta.classList.add('copiada');
-    clearTimeout(temporizadoresCopia.get(tarjeta));
-    temporizadoresCopia.set(tarjeta, setTimeout(() => {
-      tarjeta.classList.remove('copiada');
-      accion.textContent = 'Copiar';
-    }, 1600));
-  }
-
-  botonPaleta.addEventListener('click', async () => {
-    sonido.desbloquear();
-    if (estado.seleccionado < 0) return;
-    const hexes = triadaDe(estado.seleccionado).map((i) => COLORES[i].hex);
-    const ok = await copiarTexto(hexes.join(', '));
-    botonPaleta.focus({ preventScroll: true });
-    mostrarAviso(ok ? `${hexes.join(', ')} copiados` : `No se pudo copiar: ${hexes.join(', ')}`, hexes);
+    const ok = await copiarTexto(url);
+    botonCompartir.focus({ preventScroll: true });
+    mostrarAviso(ok ? 'Enlace copiado' : `No se pudo copiar: ${url}`, hexesDePaleta());
   });
 
   /* ------------------------------------------------------------------------
      10. Arrastre con ratón o dedo (Pointer Events)
      ------------------------------------------------------------------------ */
   let arrastre = null;
+  let cuadroPendiente = 0;
 
   function centroDeRueda() {
     const r = marco.getBoundingClientRect();
     return { x: r.left + r.width / 2, y: r.top + r.height / 2, radio: r.width / 2 };
   }
 
-  /** Ángulo del puntero respecto al centro (0° arriba, sentido horario). */
-  function anguloPuntero(e, centro) {
-    return (Math.atan2(e.clientX - centro.x, -(e.clientY - centro.y)) * 180) / Math.PI;
-  }
+  const anguloPuntero = (e, c) => (Math.atan2(e.clientX - c.x, -(e.clientY - c.y)) * 180) / Math.PI;
+  const enCentro = (x, y, c) => Math.hypot(x - c.x, y - c.y) < c.radio * (RADIO_CENTRO / 120);
 
-  /** El disco central queda libre en pantallas táctiles para poder desplazar la página. */
-  function enDiscoCentral(x, y, centro) {
-    return Math.hypot(x - centro.x, y - centro.y) < centro.radio * (GEO.centro / 200);
+  /** Aplica el giro del arrastre una vez por fotograma. */
+  function pintarArrastre() {
+    cuadroPendiente = 0;
+    rotor.style.transform = `rotate(${mov.x}deg)`;
+    mostrarVista(indiceEn(mov.x));
   }
 
   rueda.addEventListener('pointerdown', (e) => {
     if (e.pointerType === 'mouse' && e.button !== 0) return;
-    sonido.desbloquear();
-    const centro = centroDeRueda();
-    if (e.pointerType !== 'mouse' && enDiscoCentral(e.clientX, e.clientY, centro)) return;
+    const c = centroDeRueda();
+    // En táctil, el disco central queda libre para desplazar la página
+    if (e.pointerType !== 'mouse' && enCentro(e.clientX, e.clientY, c)) return;
     estado.tactil = e.pointerType !== 'mouse';
-    estado.interactuado = true;
+    detener();
     arrastre = {
       id: e.pointerId,
       x: e.clientX,
       y: e.clientY,
-      t: e.timeStamp,
-      centro,
-      angulo: anguloPuntero(e, centro),
+      c,
+      angulo: anguloPuntero(e, c),
       movido: false,
       segmento: e.target.closest ? e.target.closest('[data-indice]') : null,
-      muestras: [{ t: e.timeStamp, a: giro.x }],
+      muestras: [{ t: e.timeStamp, a: mov.x }],
     };
-    giro.modo = 'arrastre';   // la mano detiene el plato
-    giro.v = 0;
-    ocultarFantasma();
     try { rueda.setPointerCapture(e.pointerId); } catch (_) { /* sin captura también funciona */ }
   });
 
   rueda.addEventListener('pointermove', (e) => {
     if (!arrastre || e.pointerId !== arrastre.id) return;
-    const { centro } = arrastre;
-
+    const { c } = arrastre;
     if (!arrastre.movido) {
       if (Math.hypot(e.clientX - arrastre.x, e.clientY - arrastre.y) < UMBRAL_ARRASTRE) return;
       arrastre.movido = true;
       rueda.classList.add('arrastrando');
+      capa.classList.add('inmediata');   // la capa sigue al puntero sin retraso
     }
-
-    const angulo = anguloPuntero(e, centro);
-    const dt = Math.max(1, e.timeStamp - arrastre.t);
+    const angulo = anguloPuntero(e, c);
     // Muy cerca del eje el ángulo es inestable: solo se actualiza la referencia
-    if (Math.hypot(e.clientX - centro.x, e.clientY - centro.y) > centro.radio * 0.12) {
-      const delta = normalizar(angulo - arrastre.angulo);
-      giro.v = 0.6 * (delta / dt) + 0.4 * giro.v;
-      giro.x += delta;
-      pintarGiro();
+    if (Math.hypot(e.clientX - c.x, e.clientY - c.y) > c.radio * 0.15) {
+      mov.x += normalizar(angulo - arrastre.angulo);
+      if (!cuadroPendiente) cuadroPendiente = requestAnimationFrame(pintarArrastre);
     }
     arrastre.angulo = angulo;
-    arrastre.t = e.timeStamp;
-    arrastre.muestras.push({ t: e.timeStamp, a: giro.x });
-    if (arrastre.muestras.length > 24) arrastre.muestras.shift();
+    arrastre.muestras.push({ t: e.timeStamp, a: mov.x });
+    if (arrastre.muestras.length > 20) arrastre.muestras.shift();
   });
 
   function terminarArrastre(e, cancelado) {
     if (!arrastre || e.pointerId !== arrastre.id) return;
     const datos = arrastre;
     arrastre = null;
+    if (cuadroPendiente) {
+      cancelAnimationFrame(cuadroPendiente);
+      cuadroPendiente = 0;
+    }
+    fijarAngulo(mov.x);
     rueda.classList.remove('arrastrando');
+    capa.classList.remove('inmediata');
 
-    // Toque o clic sin arrastrar
+    // Toque sin arrastrar: elegir el color tocado
     if (!datos.movido) {
       if (datos.segmento && !cancelado) {
-        elegirSegmento(Number(datos.segmento.dataset.indice));
+        const i = Number(datos.segmento.dataset.indice);
+        irAColor(i);
+        seleccionar(i);
       } else {
-        const destino = Math.round(giro.x / PASO) * PASO;
-        moverConMuelle(destino, 0);
-        if (estado.seleccionado === -1) seleccionar(indiceEnColgante(destino));
+        irAColor(estado.seleccionado);   // vuelve al color elegido si se tocó el hueco o el centro
       }
       return;
     }
 
-    // Arrastre: velocidad de los últimos 90 ms → giro libre proyectado → muelle al color
+    // Arrastre: velocidad de los últimos 80 ms → vuelo libre proyectado → muelle al color
     const ahora = e.timeStamp;
-    const recientes = datos.muestras.filter((m) => ahora - m.t <= 90);
-    recientes.push({ t: ahora, a: giro.x });
-    let velocidad = 0;
+    const recientes = datos.muestras.filter((m) => ahora - m.t <= 80);
+    let v = 0;
     if (recientes.length >= 2 && !cancelado && !sinMovimiento()) {
       const primera = recientes[0];
       const ultima = recientes[recientes.length - 1];
-      velocidad = (ultima.a - primera.a) / Math.max(16, ultima.t - primera.t);
+      v = limitar((ultima.a - primera.a) / Math.max(16, ultima.t - primera.t), -3, 3);
     }
-    const destino = Math.round((giro.x + limitar(velocidad * PROYECCION, -720, 720)) / PASO) * PASO;
-    moverConMuelle(destino, velocidad);
-    seleccionar(indiceEnColgante(destino));
+    const destino = Math.round((mov.x + v * PROYECCION) / PASO) * PASO;
+    reproducir(trayectoriaMuelle(mov.x, v, destino));
+    seleccionar(indiceEn(destino));
   }
 
   rueda.addEventListener('pointerup', (e) => terminarArrastre(e, false));
@@ -878,109 +783,131 @@
   rueda.addEventListener('lostpointercapture', (e) => terminarArrastre(e, true));
   rueda.addEventListener('contextmenu', (e) => e.preventDefault());
 
-  // Móvil: el dedo sobre el anillo de colores gira la rueda y no mueve la página;
-  // sobre el disco central, la página se desplaza con normalidad (touch-action: pan-y en CSS)
+  // Táctil: sobre el anillo, el dedo gira la rueda y no mueve la página
   rueda.addEventListener('touchstart', (e) => {
     const toque = e.touches[0];
     if (!toque || e.touches.length > 1) return;
-    if (!enDiscoCentral(toque.clientX, toque.clientY, centroDeRueda())) e.preventDefault();
+    if (!enCentro(toque.clientX, toque.clientY, centroDeRueda())) e.preventDefault();
   }, { passive: false });
 
-  // iOS solo activa el audio al terminar un toque o con un clic
-  document.addEventListener('touchend', () => sonido.desbloquear(), { passive: true });
-  document.addEventListener('click', () => sonido.desbloquear());
-
-  // Ratón: el triángulo punteado anticipa la tríada del color señalado
-  rueda.addEventListener('pointerover', (e) => {
-    if (e.pointerType !== 'mouse' || arrastre) return;
-    const segmento = e.target.closest ? e.target.closest('[data-indice]') : null;
-    if (segmento) mostrarFantasma(Number(segmento.dataset.indice));
-    else ocultarFantasma();
-  });
-  rueda.addEventListener('pointerleave', () => { if (!arrastre) ocultarFantasma(); });
-
   /* ------------------------------------------------------------------------
-     11. Teclado: flechas para girar, Enter o Espacio para elegir
+     11. Teclado: las flechas eligen el color anterior o siguiente
      ------------------------------------------------------------------------ */
   rueda.addEventListener('keydown', (e) => {
-    let pasos = 0;
-    switch (e.key) {
-      case 'ArrowRight':
-      case 'ArrowDown':
-        pasos = 1;    // trae al colgante el siguiente color en sentido horario
-        break;
-      case 'ArrowLeft':
-      case 'ArrowUp':
-        pasos = -1;
-        break;
-      case 'Enter':
-      case ' ':
-        e.preventDefault();
-        estado.interactuado = true;
-        sonido.desbloquear();
-        seleccionar(indiceEnColgante(destinoActual()));
-        return;
-      default:
-        return;
-    }
-    e.preventDefault();
-    estado.interactuado = true;
-    estado.tactil = false;
-    sonido.desbloquear();
-    const base = Math.round(destinoActual() / PASO) * PASO;
-    moverConMuelle(base - pasos * PASO, giro.modo === 'muelle' ? giro.v : 0);
-  });
-
-  /* ------------------------------------------------------------------------
-     12. Sonido sí / no
-     ------------------------------------------------------------------------ */
-  function pintarBotonSonido() {
-    botonSonido.setAttribute('aria-pressed', String(sonido.activo));
-    botonSonido.querySelector('.sonido__texto').textContent = sonido.activo ? 'Con sonido' : 'Sin sonido';
-  }
-
-  botonSonido.addEventListener('click', () => {
-    sonido.activo = !sonido.activo;
-    guardarPreferencia('circulo-cromatico:sonido', sonido.activo);
-    pintarBotonSonido();
-    if (sonido.activo) {
-      sonido.desbloquear();
-      setTimeout(() => sonido.nota(880, 0.01, 0.08), 40);
-    }
-  });
-
-  /* ------------------------------------------------------------------------
-     13. Inicio: el plato llega girando y se detiene con el amarillo arriba
-     ------------------------------------------------------------------------ */
-  function iniciar() {
-    construirRueda();
-    ajustarRotulos();
-    if (document.fonts && document.fonts.ready) document.fonts.ready.then(ajustarRotulos);
-    girarTriangulo(0);
-    crearTarjetas();
-    pintarBotonSonido();
-    actualizarTarjetas(triadaDe(0), false);
-
-    const elegirInicial = () => {
-      if (estado.seleccionado === -1) seleccionar(0, { animar: false, anunciar: false });
-    };
-
-    if (sinMovimiento()) {
-      giro.x = 0;
-      pintarGiro();
-      elegirInicial();
+    const pasos = { ArrowRight: 1, ArrowDown: 1, ArrowLeft: -1, ArrowUp: -1 }[e.key];
+    if (e.key === 'Home' || e.key === 'End') {
+      e.preventDefault();
+      estado.tactil = false;
+      const i = e.key === 'Home' ? 0 : TOTAL - 1;
+      irAColor(i, velocidadActual());
+      seleccionar(i);
       return;
     }
+    if (!pasos) return;
+    e.preventDefault();
+    estado.tactil = false;
+    const i = mod(estado.seleccionado + pasos, TOTAL);
+    // Conserva la velocidad del giro en curso para encadenar pulsaciones rápidas sin saltos
+    irAColor(i, velocidadActual());
+    seleccionar(i);
+  });
 
-    giro.x = -150;
-    giro.tramo = Math.floor((giro.x + PASO / 2) / PASO);
-    pintarGiro();
-    setTimeout(() => {
-      if (estado.interactuado) return;
-      giro.entrada = { desde: giro.x, hasta: 0, inicio: performance.now(), duracion: 1700, alTerminar: elegirInicial };
-      giro.modo = 'entrada';
-      despertar();
-    }, 250);
+  /* ------------------------------------------------------------------------
+     12. Controles: armonía, formato, azar y tema
+     ------------------------------------------------------------------------ */
+  /** Cambia la armonía: nueva capa en la rueda y nuevas muestras. */
+  function cambiarModo(modo) {
+    estado.modo = modo;
+    const radio = document.querySelector(`input[name="armonia"][value="${modo}"]`);
+    if (radio) radio.checked = true;
+    construirCapa();
+    estado.anguloCapa = cercano(0, estado.vista * PASO, 360);
+    capa.classList.add('inmediata');
+    capa.style.transform = `rotate(${estado.anguloCapa}deg)`;
+    if (!sinMovimiento() && capa.animate) capa.animate([{ opacity: 0 }, { opacity: 1 }], { duration: 280, easing: 'ease-out' });
+    requestAnimationFrame(() => capa.classList.remove('inmediata'));
+    pintarPanel(true);
+  }
+
+  document.querySelectorAll('input[name="armonia"]').forEach((radio) => {
+    radio.addEventListener('change', () => {
+      cambiarModo(radio.value);
+      guardarEnEnlace();
+      const nombres = coloresDeArmonia(estado.seleccionado, estado.modo).map((k) => COLORES[k].nombre.toLowerCase());
+      anunciador.textContent = `${tituloDeArmonia()}: ${enumerar(nombres)}.`;
+    });
+  });
+
+  // Si cambia el enlace (#triada-azul…) con la página abierta, se aplica
+  window.addEventListener('hashchange', () => {
+    const enlace = leerEnlace();
+    if (!enlace) return;
+    if (enlace.modo !== estado.modo) cambiarModo(enlace.modo);
+    if (enlace.indice !== estado.seleccionado) {
+      irAColor(enlace.indice);
+      seleccionar(enlace.indice);
+    }
+  });
+
+  document.querySelectorAll('input[name="formato"]').forEach((radio) => {
+    radio.addEventListener('change', () => {
+      estado.formato = radio.value;
+      pintarPanel(false);
+    });
+  });
+
+  // Color al azar: una vuelta completa larga que frena hasta el nuevo color
+  $('azar').addEventListener('click', () => {
+    let i = estado.seleccionado;
+    while (i === estado.seleccionado) i = Math.floor(Math.random() * TOTAL);
+    const x = anguloActual();
+    const recorrido = mod(-i * PASO - x, 360) + 360;   // siempre en sentido horario
+    reproducir(trayectoriaCurva(x, x + recorrido, 1500, salidaCuarta));
+    seleccionar(i);
+  });
+
+  const botonTema = $('tema');
+  const temaActual = () => document.documentElement.getAttribute('data-theme') || (preferenciaOscura.matches ? 'dark' : 'light');
+  function pintarBotonTema() {
+    botonTema.setAttribute('aria-label', temaActual() === 'dark' ? 'Cambiar a tema claro' : 'Cambiar a tema oscuro');
+  }
+  botonTema.addEventListener('click', () => {
+    const nuevo = temaActual() === 'dark' ? 'light' : 'dark';
+    document.documentElement.setAttribute('data-theme', nuevo);
+    try { localStorage.setItem('circulo-cromatico:tema', nuevo); } catch (_) { /* sin almacenamiento */ }
+    pintarBotonTema();
+  });
+  if (preferenciaOscura.addEventListener) preferenciaOscura.addEventListener('change', pintarBotonTema);
+
+  /* ------------------------------------------------------------------------
+     13. Inicio
+     ------------------------------------------------------------------------ */
+  function iniciar() {
+    const enlace = leerEnlace();
+    if (enlace) {
+      estado.modo = enlace.modo;
+      estado.seleccionado = enlace.indice;
+      const radio = document.querySelector(`input[name="armonia"][value="${enlace.modo}"]`);
+      if (radio) radio.checked = true;
+    } else {
+      // El navegador puede recordar el radio marcado al recargar: se respeta
+      const marcado = document.querySelector('input[name="armonia"]:checked');
+      if (marcado) estado.modo = marcado.value;
+    }
+
+    construirAnillo();
+    construirCapa();
+    pintarBotonTema();
+    pintarPanel(true);
+
+    const objetivo = -estado.seleccionado * PASO;
+    estado.anguloCapa = estado.seleccionado * PASO;
+    capa.style.transform = `rotate(${estado.anguloCapa}deg)`;
+    seleccionar(estado.seleccionado, { anunciar: false });
+
+    // Entrada: la rueda llega girando un tercio de vuelta y se detiene en su color
+    fijarAngulo(objetivo - 120);
+    reproducir(trayectoriaCurva(objetivo - 120, objetivo, 1100, salidaCubica));
   }
 
   iniciar();

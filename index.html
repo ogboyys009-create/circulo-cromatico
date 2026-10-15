@@ -4,124 +4,152 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <title>Círculo Cromático</title>
-  <meta name="description" content="Rueda cromática de 12 colores según la teoría tradicional RYB. Gira la rueda, elige un color y descubre su tríada.">
-  <meta name="theme-color" content="#FAF3E3">
-  <meta name="color-scheme" content="light">
+  <meta name="description" content="Rueda cromática RYB de 24 colores. Gírala, elige un color y descubre su tríada, su complementario y otras armonías.">
+  <meta name="color-scheme" content="light dark">
+  <meta name="theme-color" content="#EDECE8" media="(prefers-color-scheme: light)">
+  <meta name="theme-color" content="#161618" media="(prefers-color-scheme: dark)">
 
-  <!-- Favicon: la tríada primaria unida por un triángulo dorado -->
-  <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Ccircle cx='16' cy='16' r='15' fill='%23B8924A'/%3E%3Ccircle cx='16' cy='16' r='13.6' fill='%23FFFCF5'/%3E%3Cpath d='M16 8.5 22.5 19.75H9.5Z' fill='none' stroke='%23B8924A' stroke-width='1.2'/%3E%3Ccircle cx='16' cy='8.5' r='3.4' fill='%23FFD400'/%3E%3Ccircle cx='22.5' cy='19.75' r='3.4' fill='%23E2231A'/%3E%3Ccircle cx='9.5' cy='19.75' r='3.4' fill='%231D5FD1'/%3E%3C/svg%3E">
+  <!-- Favicon: la tríada primaria -->
+  <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Ccircle cx='16' cy='8.5' r='6' fill='%23FFD400'/%3E%3Ccircle cx='22.5' cy='20' r='6' fill='%23E2231A'/%3E%3Ccircle cx='9.5' cy='20' r='6' fill='%231D5FD1'/%3E%3C/svg%3E">
 
-  <!-- Tipografías incrustadas: Cormorant Garamond (títulos, grabados y cifras) e Inter (texto) -->
+  <!-- Aplica el tema guardado antes de pintar, para que no parpadee -->
+  <script>
+    try {
+      var tema = localStorage.getItem('circulo-cromatico:tema');
+      if (tema === 'light' || tema === 'dark') document.documentElement.setAttribute('data-theme', tema);
+    } catch (e) { /* sin almacenamiento: se sigue el tema del sistema */ }
+  </script>
+
   <link rel="stylesheet" href="css/fuentes.css">
   <link rel="stylesheet" href="css/styles.css">
   <script src="js/app.js" defer></script>
 </head>
 <body>
-  <div class="pagina">
+  <div class="app">
 
-    <!-- ============ Encabezado ============ -->
+    <!-- ============ Cabecera ============ -->
     <header class="cabecera">
-      <h1 class="titulo">Círculo Cromático</h1>
-      <!-- Adorno: filete dorado que termina en un rombo -->
-      <svg class="adorno" viewBox="0 0 120 12" aria-hidden="true" focusable="false">
-        <line x1="0" y1="6" x2="104" y2="6"/>
-        <path d="M112 1 117 6 112 11 107 6Z"/>
-      </svg>
-      <p class="subtitulo">Gira la rueda y descubre tu tríada</p>
-    </header>
-
-    <!-- ============ Lectura: qué es la rueda y qué tríada hay elegida ============ -->
-    <div class="lectura">
-      <p class="lectura__intro">
-        Doce colores en el orden del círculo tradicional. Rojo, amarillo y azul son los
-        primarios; naranja, verde y violeta nacen de mezclarlos de dos en dos, y los seis
-        terciarios quedan entre unos y otros.
-      </p>
-
-      <div class="lectura__triada">
-        <h2 class="lectura__titulo" id="triada-titulo">Tríada primaria</h2>
-        <p class="lectura__colores" id="triada-colores">Amarillo, rojo y azul</p>
-        <p class="lectura__consejo" id="triada-consejo">
-          Tres colores a 120° entre sí. En una cocina funcionan si uno manda y los otros
-          acompañan: amarillo en lo grande, rojo en los textiles y azul en los detalles.
-        </p>
-      </div>
-    </div>
-
-    <!-- ============ La rueda ============ -->
-    <section class="lamina" aria-label="Rueda cromática">
-      <div class="rueda-marco" id="rueda-marco">
-        <!--
-          La rueda funciona como un "listbox" accesible:
-          Tab la enfoca, las flechas la giran y Enter o Espacio eligen el color del colgante.
-        -->
-        <div class="rueda" id="rueda" role="listbox" tabindex="0"
-             aria-label="Rueda cromática de 12 colores"
-             aria-describedby="rueda-ayuda">
-          <!-- Plato de porcelana con filo dorado (no gira) -->
-          <div class="rueda__plato" aria-hidden="true"></div>
-          <!-- Rotor: js/app.js dibuja aquí el SVG con los colores, los grabados y el triángulo -->
-          <div class="rueda__rotor" id="rueda-rotor"></div>
-          <!-- Tornillo central de latón -->
-          <div class="rueda__eje" aria-hidden="true"></div>
-          <!-- Colgante de latón: marca el color activo y oscila al pasar cada segmento -->
-          <svg class="rueda__colgante" id="colgante" viewBox="0 0 24 34" aria-hidden="true" focusable="false">
-            <path d="M12 33 4.3 13.56A8.3 8.3 0 1 1 19.7 13.56Z" fill="#B8924A" stroke="#6E5326" stroke-width="0.7"/>
-            <circle cx="12" cy="10.5" r="4.4" fill="#FFFCF5" stroke="#6E5326" stroke-width="0.5"/>
-            <circle id="colgante-color" cx="12" cy="10.5" r="3.3" fill="#FFD400"/>
-          </svg>
+      <div class="marca">
+        <svg class="marca__icono" viewBox="0 0 32 32" aria-hidden="true" focusable="false">
+          <circle cx="16" cy="8.5" r="6" fill="#FFD400"/>
+          <circle cx="22.5" cy="20" r="6" fill="#E2231A"/>
+          <circle cx="9.5" cy="20" r="6" fill="#1D5FD1"/>
+        </svg>
+        <div>
+          <h1 class="marca__titulo">Círculo Cromático</h1>
+          <p class="marca__lema">Gira la rueda y descubre tu tríada</p>
         </div>
       </div>
+      <button class="boton-icono" id="tema" type="button" aria-label="Cambiar a tema oscuro">
+        <svg class="icono-sol" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+          <circle cx="12" cy="12" r="4.2"/>
+          <path d="M12 2.5v2.2M12 19.3v2.2M2.5 12h2.2M19.3 12h2.2M5.3 5.3l1.6 1.6M17.1 17.1l1.6 1.6M5.3 18.7l1.6-1.6M17.1 6.9l1.6-1.6"/>
+        </svg>
+        <svg class="icono-luna" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+          <path d="M20 14.6A8.5 8.5 0 1 1 9.4 4a6.8 6.8 0 0 0 10.6 10.6Z"/>
+        </svg>
+      </button>
+    </header>
 
-      <div class="lamina__pie">
-        <p class="lamina__ayuda" id="rueda-ayuda">
-          Arrastra el anillo de colores para girar o toca un color.
-          <span class="lamina__teclado">Con el teclado: flechas para girar y Enter para elegir.</span>
+    <main class="principal">
+
+      <!-- ============ Dial: lectura en vivo + rueda ============ -->
+      <section class="dial" aria-label="Rueda cromática">
+        <!-- Nombre del color bajo el puntero: cambia en vivo mientras giras -->
+        <div class="lectura" aria-hidden="true">
+          <p class="lectura__nombre" id="lectura-nombre">Amarillo</p>
+          <p class="lectura__datos">
+            <span class="lectura__hex" id="lectura-hex">#FFD400</span>
+            <span id="lectura-tipo">Primario</span>
+            <span id="lectura-grados">0°</span>
+          </p>
+        </div>
+
+        <div class="rueda-marco" id="rueda-marco">
+          <!--
+            La rueda es un "listbox" accesible: Tab la enfoca, las flechas
+            eligen el color anterior o siguiente y la rueda gira hasta él.
+          -->
+          <div class="rueda" id="rueda" role="listbox" tabindex="0"
+               aria-label="Rueda cromática de 24 colores"
+               aria-describedby="rueda-ayuda">
+            <div class="rueda__base" aria-hidden="true"></div>
+            <!-- Ventana: recorta las esquinas del rotor al girar (si no, ensancharían la página) -->
+            <div class="rueda__ventana">
+              <!-- Rotor: lo único que gira. js/app.js dibuja dentro el anillo de colores -->
+              <div class="rueda__rotor" id="rotor">
+                <div class="rueda__centro" id="centro" aria-hidden="true"></div>
+                <!-- Capa de la armonía: atenúa el resto, marca los colores y dibuja el polígono -->
+                <div class="rueda__capa" id="capa" aria-hidden="true"></div>
+              </div>
+            </div>
+            <!-- Puntero fijo: el color que queda debajo es el elegido -->
+            <svg class="rueda__puntero" viewBox="0 0 24 16" aria-hidden="true" focusable="false">
+              <path d="M3.5 2.5h17a1.5 1.5 0 0 1 1.2 2.4l-8.5 9.6a1.6 1.6 0 0 1-2.4 0L2.3 4.9a1.5 1.5 0 0 1 1.2-2.4Z"/>
+            </svg>
+          </div>
+        </div>
+
+        <div class="dial__pie">
+          <p class="dial__ayuda" id="rueda-ayuda">
+            Gira el anillo o toca un color.
+            <span class="dial__teclado">Con el teclado, usa las flechas.</span>
+          </p>
+          <button class="boton" id="azar" type="button">
+            <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+              <rect x="3.5" y="3.5" width="17" height="17" rx="4"/>
+              <circle cx="8.5" cy="8.5" r="1.3"/><circle cx="15.5" cy="15.5" r="1.3"/><circle cx="12" cy="12" r="1.3"/>
+            </svg>
+            Color al azar
+          </button>
+        </div>
+        <noscript><p class="dial__ayuda">Activa JavaScript para usar la rueda.</p></noscript>
+      </section>
+
+      <!-- ============ Panel: armonía y paleta ============ -->
+      <section class="panel" aria-labelledby="titulo-armonia">
+        <div class="armonias" role="radiogroup" aria-label="Armonía">
+          <label class="opcion"><input type="radio" name="armonia" value="triada" checked><span>Tríada</span></label>
+          <label class="opcion"><input type="radio" name="armonia" value="complementario"><span>Complementario</span></label>
+          <label class="opcion"><input type="radio" name="armonia" value="analogo"><span>Análogo</span></label>
+          <label class="opcion"><input type="radio" name="armonia" value="dividido"><span>Dividido</span></label>
+          <label class="opcion"><input type="radio" name="armonia" value="tetrada"><span>Tétrada</span></label>
+        </div>
+
+        <h2 class="panel__titulo" id="titulo-armonia">Tríada primaria</h2>
+        <p class="panel__texto" id="texto-armonia">
+          Tres colores separados 120°. Contraste vivo y equilibrado: deja que uno domine y usa los
+          otros como acento.
         </p>
-        <button class="sonido" id="sonido" type="button" aria-pressed="true">
-          <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
-            <path d="M4 9.5h3.2L12 5.5v13l-4.8-4H4z"/>
-            <path class="sonido__ondas" d="M15.5 9a4 4 0 0 1 0 6M18 6.5a7.5 7.5 0 0 1 0 11"/>
-            <path class="sonido__cruz" d="M16 10l4 4M20 10l-4 4"/>
-          </svg>
-          <span class="sonido__texto">Con sonido</span>
-        </button>
-      </div>
-      <noscript><p class="lamina__ayuda">Activa JavaScript para usar la rueda.</p></noscript>
-    </section>
 
-    <!-- ============ Tarjetas de la tríada ============ -->
-    <section class="triada" aria-labelledby="triada-titulo">
-      <!-- JS crea aquí las tres tarjetas a partir de la plantilla -->
-      <div class="tarjetas" id="tarjetas"></div>
-      <button class="copiar-todo" id="copiar-paleta" type="button">Copiar los tres códigos</button>
-    </section>
+        <!-- JS crea aquí una muestra por color, cada una con sus tonos claros y oscuros -->
+        <ul class="muestras" id="muestras" aria-label="Paleta"></ul>
+        <p class="panel__nota">Toca un color o un tono para copiarlo.</p>
+
+        <div class="acciones">
+          <div class="formato" role="radiogroup" aria-label="Formato del código">
+            <label class="opcion opcion--pequena"><input type="radio" name="formato" value="hex" checked><span>HEX</span></label>
+            <label class="opcion opcion--pequena"><input type="radio" name="formato" value="rgb"><span>RGB</span></label>
+            <label class="opcion opcion--pequena"><input type="radio" name="formato" value="hsl"><span>HSL</span></label>
+          </div>
+          <div class="acciones__botones">
+            <button class="boton" id="copiar-paleta" type="button">Copiar paleta</button>
+            <button class="boton" id="copiar-css" type="button">Copiar CSS</button>
+            <button class="boton" id="compartir" type="button">Compartir</button>
+          </div>
+        </div>
+      </section>
+    </main>
 
     <footer class="pie">
-      <p>Círculo cromático tradicional (RYB). En pantalla los colores son orientativos: antes de pintar, pide una muestra real.</p>
+      <p>24 colores del círculo cromático tradicional (RYB). En pantalla los colores son orientativos: antes de pintar, pide una muestra real.</p>
+      <p><a href="https://github.com/ogboyys009-create/circulo-cromatico">Código en GitHub</a></p>
     </footer>
   </div>
 
-  <!-- Plantilla de tarjeta -->
-  <template id="plantilla-tarjeta">
-    <button class="tarjeta" type="button">
-      <span class="tarjeta__muestra"></span>
-      <span class="tarjeta__texto">
-        <span class="tarjeta__nombre"></span>
-        <span class="tarjeta__categoria"></span>
-        <span class="tarjeta__codigos">
-          <span class="tarjeta__hex"></span>
-          <span class="tarjeta__rgb"></span>
-        </span>
-      </span>
-      <span class="tarjeta__grados"></span>
-      <span class="tarjeta__accion">Copiar</span>
-    </button>
-  </template>
-
   <!-- Aviso breve al copiar -->
   <div class="aviso" id="aviso" role="status" aria-live="polite" aria-atomic="true"></div>
-  <!-- Anuncios para lectores de pantalla cuando cambia la tríada -->
+  <!-- Anuncios para lectores de pantalla -->
   <p class="solo-lector" id="anunciador" aria-live="polite" aria-atomic="true"></p>
 </body>
 </html>

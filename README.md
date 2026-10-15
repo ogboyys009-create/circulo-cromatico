@@ -1,71 +1,86 @@
 # Círculo Cromático
 
-Rueda cromática interactiva de 12 colores basada en la teoría del color tradicional (RYB).
-Gira la rueda, elige un color y descubre su **tríada**: los dos colores que están a 120° de él.
+Rueda cromática RYB de **24 colores**. Gírala, elige un color y descubre su tríada, su
+complementario y otras armonías, con tonos claros y oscuros listos para copiar.
 
 **Verla en línea:** <https://ogboyys009-create.github.io/circulo-cromatico/>
 
-Hecha solo con **HTML, CSS y JavaScript nativos**, sin frameworks ni dependencias.
-Se abre directamente en el navegador y se puede publicar tal cual con GitHub Pages.
+Hecha solo con **HTML, CSS y JavaScript nativos**, sin frameworks ni dependencias. Se abre con
+doble clic en el navegador y se publica tal cual con GitHub Pages.
 
 ## Funciones
 
-- **12 colores en su posición RYB**: 3 primarios (rojo, amarillo, azul), 3 secundarios
-  (naranja, verde, violeta) y 6 terciarios (rojo-naranja, amarillo-naranja, amarillo-verde,
-  azul-verde, azul-violeta, rojo-violeta).
-- **Plato de porcelana pintada**: filo dorado fino, colores planos con grano de pigmento,
-  filetes de oro entre ellos, nombres en cursiva y graduación cada 6° en el ala del plato.
-- **Giro con física**: arrastra con el ratón o con el dedo (Pointer Events). Si la lanzas, sigue
-  girando por inercia y se asienta con un muelle suave en el color más cercano.
-- **Colgante de latón**: marca el color activo y oscila cada vez que un filete pasa por debajo,
-  como el trinquete de un dial.
-- **Sonido sintetizado** (Web Audio, sin archivos): un clic por cada color y tres notas al elegir.
-  Cada color es un semitono, así que cada tríada suena distinta. Se apaga con *Con sonido*.
-- **Elegir un color**: con un clic o un toque (el plato lo lleva al colgante) o soltando la rueda
-  con el color deseado bajo el colgante.
-- **Tríada resaltada**: los tres colores se elevan con borde dorado, un leve aumento de tamaño y
-  sombra suave; el resto se atenúa y un triángulo dorado se dibuja en el centro.
-- **Vista previa**: al pasar el ratón por un color, o mientras arrastras, un triángulo punteado
-  anticipa su tríada.
-- **Lectura de la tríada**: nombre, colores y una sugerencia de uso en la cocina (uno manda y los
-  otros acompañan).
-- **Tarjetas** con nombre, categoría, posición en la rueda, HEX y RGB. La del color elegido es
-  mayor. Al pulsar una se copia su HEX; *Copiar los tres códigos* copia la paleta entera.
+- **24 colores RYB** en su posición: 3 primarios, 3 secundarios, 6 terciarios y 12 intermedios
+  (uno entre cada par vecino), cada 15°.
+- **Giro con física**: arrastra el anillo con el ratón o el dedo; si lo lanzas, sigue girando por
+  inercia y se asienta con un muelle suave en el color más cercano. El color bajo el puntero se
+  muestra en vivo (nombre grande, disco central y armonía) mientras giras.
+- **Cinco armonías**: tríada, complementario, análogo, complementario dividido y tétrada. La rueda
+  atenúa el resto, marca los colores y dibuja la figura que los une.
+- **Paleta** con cada color de la armonía: nombre, código, contraste del texto (blanco u oscuro,
+  según cuál se lea mejor, con su relación WCAG) y **5 tonos** del más claro al más oscuro.
+- **Copiar** cualquier color o tono en **HEX, RGB o HSL**, la paleta entera o como
+  **variables CSS**.
+- **Color al azar**: una vuelta larga que frena en un color nuevo.
+- **Compartir**: el enlace guarda la armonía y el color (`#triada-amarillo`). En el móvil abre el
+  menú de compartir del sistema.
+- **Tema claro y oscuro**: sigue al sistema y se puede cambiar con el botón de arriba.
 - **Accesible**: navegación con teclado, etiquetas ARIA, anuncios para lectores de pantalla y
-  contraste AA del texto sobre el papel.
-- **Responsive**: una columna en móvil; en escritorio, texto a la izquierda y plato a la derecha.
-- **Respeta `prefers-reduced-motion`**: sin animaciones ni inercia para quien lo tenga activado.
+  contraste AA en los textos.
+- **Responsive**: una columna en móvil, dos en escritorio.
+- **Respeta `prefers-reduced-motion`**.
+
+## Rendimiento
+
+Pensada para ir fluida en móviles modestos, en iOS, Android, macOS y Windows:
+
+- El anillo se dibuja una sola vez. Al girar solo cambia un `transform` de su capa.
+- Al soltar, la trayectoria (inercia + muelle) se calcula de antemano y se reproduce con
+  **Web Animations**, que ejecuta el compositor del navegador: el giro no se traba aunque el hilo
+  principal esté ocupado.
+- Durante el arrastre, las escrituras se agrupan en un solo fotograma.
+- Sin filtros, desenfoques ni sombras animadas. Las tipografías van incrustadas, sin peticiones a
+  otros servidores.
+
+Probado con Chrome (CPU ralentizada ×4: 60 fps constantes) y con WebKit, el motor de Safari
+(escritorio e iPhone emulado).
 
 ## Uso con teclado
 
-| Tecla                | Acción                                           |
-| -------------------- | ------------------------------------------------ |
-| `Tab`                | Enfoca la rueda y después las tarjetas           |
-| `→` / `↓`            | Gira la rueda un segmento (siguiente color)      |
-| `←` / `↑`            | Gira la rueda un segmento (color anterior)       |
-| `Enter` / `Espacio`  | Elige el color que está bajo el colgante         |
-| `Enter` en tarjeta   | Copia su código HEX                              |
+| Tecla              | Acción                                   |
+| ------------------ | ---------------------------------------- |
+| `Tab`              | Enfoca la rueda y después los controles  |
+| `→` / `↓`          | Siguiente color (la rueda gira hasta él) |
+| `←` / `↑`          | Color anterior                           |
+| `Inicio` / `Fin`   | Primer / último color                    |
+| `Enter` en un color de la paleta | Copia su código            |
+
+## Armonías
+
+| Armonía                 | Posiciones respecto a tu color |
+| ----------------------- | ------------------------------ |
+| Tríada                  | 0°, 120°, 240°                 |
+| Complementario          | 0°, 180°                       |
+| Análogo                 | 0°, +30°, −30°                 |
+| Complementario dividido | 0°, 150°, 210°                 |
+| Tétrada                 | 0°, 90°, 180°, 270°            |
 
 ## Colores
 
-| Posición | Color            | Categoría  | HEX       |
-| -------- | ---------------- | ---------- | --------- |
-| 0°       | Amarillo         | Primario   | `#FFD400` |
-| 30°      | Amarillo-naranja | Terciario  | `#FFA800` |
-| 60°      | Naranja          | Secundario | `#FF7B00` |
-| 90°      | Rojo-naranja     | Terciario  | `#F4471C` |
-| 120°     | Rojo             | Primario   | `#E2231A` |
-| 150°     | Rojo-violeta     | Terciario  | `#C0186D` |
-| 180°     | Violeta          | Secundario | `#7D2BB5` |
-| 210°     | Azul-violeta     | Terciario  | `#4C3CC4` |
-| 240°     | Azul             | Primario   | `#1D5FD1` |
-| 270°     | Azul-verde       | Terciario  | `#0098A6` |
-| 300°     | Verde            | Secundario | `#1FA74A` |
-| 330°     | Amarillo-verde   | Terciario  | `#9BCB1C` |
-
-Las cuatro tríadas posibles son: primaria (amarillo, rojo, azul), secundaria (naranja, violeta,
-verde) y dos terciarias (amarillo-naranja, rojo-violeta, azul-verde / rojo-naranja,
-azul-violeta, amarillo-verde).
+| Pos. | Color            | Tipo       | HEX       | Pos. | Color          | Tipo       | HEX       |
+| ---- | ---------------- | ---------- | --------- | ---- | -------------- | ---------- | --------- |
+| 0°   | Amarillo         | Primario   | `#FFD400` | 180° | Violeta        | Secundario | `#7D2BB5` |
+| 15°  | Amarillo dorado  | Intermedio | `#FFBE00` | 195° | Amatista       | Intermedio | `#6433BD` |
+| 30°  | Amarillo-naranja | Terciario  | `#FFA800` | 210° | Azul-violeta   | Terciario  | `#4C3CC4` |
+| 45°  | Mandarina        | Intermedio | `#FF9100` | 225° | Ultramar       | Intermedio | `#344ECB` |
+| 60°  | Naranja          | Secundario | `#FF7B00` | 240° | Azul           | Primario   | `#1D5FD1` |
+| 75°  | Calabaza         | Intermedio | `#FA6110` | 255° | Cerúleo        | Intermedio | `#0A7DC0` |
+| 90°  | Rojo-naranja     | Terciario  | `#F4471C` | 270° | Azul-verde     | Terciario  | `#0098A6` |
+| 105° | Bermellón        | Intermedio | `#EC3420` | 285° | Esmeralda      | Intermedio | `#10A07A` |
+| 120° | Rojo             | Primario   | `#E2231A` | 300° | Verde          | Secundario | `#1FA74A` |
+| 135° | Carmín           | Intermedio | `#D11A45` | 315° | Verde hierba   | Intermedio | `#5BB832` |
+| 150° | Rojo-violeta     | Terciario  | `#C0186D` | 330° | Amarillo-verde | Terciario  | `#9BCB1C` |
+| 165° | Púrpura          | Intermedio | `#9F2196` | 345° | Lima           | Intermedio | `#CFD20E` |
 
 ## Estructura
 
@@ -74,9 +89,9 @@ circulo-cromatico/
 ├── index.html        Estructura de la página y marcado accesible
 ├── css/
 │   ├── fuentes.css   Tipografías incrustadas en base64 (archivo generado)
-│   └── styles.css    Tema visual (marfil, lino, latón y café), rueda, tarjetas y responsive
+│   └── styles.css    Temas claro y oscuro, rueda, paleta, controles y responsive
 ├── js/
-│   └── app.js        Datos, dibujo SVG, física del giro, sonido, tríadas, tarjetas y copiado
+│   └── app.js        Colores, dibujo de la rueda, física del giro, armonías, paleta y copiado
 ├── licencias/        Licencias SIL Open Font License de las tipografías
 ├── README.md
 └── .gitignore
@@ -96,7 +111,7 @@ y abre <http://localhost:8000>.
 
 ## Publicar en GitHub Pages
 
-1. Crea un repositorio vacío en GitHub llamado `circulo-cromatico` (sin README ni .gitignore).
+1. Crea un repositorio vacío en GitHub (sin README ni .gitignore).
 2. Conecta este repositorio local y sube la rama `main`:
 
    ```bash
@@ -106,18 +121,12 @@ y abre <http://localhost:8000>.
 
 3. En GitHub ve a **Settings → Pages**. En **Build and deployment → Source** elige
    **Deploy from a branch**, rama **main** y carpeta **/ (root)**, y pulsa **Save**.
-4. En uno o dos minutos la página estará en
-   `https://<tu-usuario>.github.io/circulo-cromatico/`.
+4. En uno o dos minutos la página estará en `https://<tu-usuario>.github.io/circulo-cromatico/`.
 
 ## Diseño
 
-- Tipografías: [Cormorant Garamond](https://fonts.google.com/specimen/Cormorant+Garamond) para
-  títulos, grabados y cifras e [Inter](https://fonts.google.com/specimen/Inter) para el texto.
-  Van incrustadas en `css/fuentes.css`, así que la página se ve igual sin conexión, al abrirla
-  con doble clic o en redes que bloquean Google Fonts. Ambas usan la licencia SIL OFL 1.1.
-- Paleta: marfil `#FAF3E3`, lino `#F0E4CC`, latón `#B8924A`, café espresso `#3B2A20` y
-  café con leche `#8A7260`. Para el texto pequeño se usan variantes un poco más oscuras del latón
-  y del café con leche, de modo que cumplan el contraste AA.
-- Idea: una lámina de un tratado de color sobre papel de lino, con un plato de porcelana pintada
-  como única pieza llamativa. Sin brillos, degradados de adorno ni efectos 3D: papel, tipografía,
-  filetes finos y el movimiento físico del plato.
+- Tipografías: [Bricolage Grotesque](https://fonts.google.com/specimen/Bricolage+Grotesque) para
+  títulos y el nombre del color, e [Instrument Sans](https://fonts.google.com/specimen/Instrument+Sans)
+  para el texto. Ambas con licencia SIL OFL 1.1, incrustadas en `css/fuentes.css`.
+- Interfaz en tinta neutra (clara u oscura) para que lo único con color sean la rueda y la paleta.
+- Los colores en pantalla son orientativos: para pintar, compruébalos con una muestra real.

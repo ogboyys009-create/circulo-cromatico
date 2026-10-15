@@ -1,39 +1,60 @@
 /* ==========================================================================
    Círculo Cromático — hoja de estilos
 
-   Idea: una lámina de un tratado de color sobre papel de lino, y en ella un
-   plato de porcelana pintado a mano con filo dorado. El plato es la única
-   pieza llamativa; todo lo demás es papel, tipografía y filetes finos.
+   Una herramienta de color sobria: interfaz en tinta neutra (clara u oscura)
+   para que lo único con color sean la rueda y la paleta. La pieza llamativa
+   es el dial; el nombre del color, grande, cambia en vivo al girar.
+
+   Rendimiento: lo que se anima solo usa transform y opacity (lo resuelve la
+   GPU). Nada de filtros, desenfoques ni sombras animadas.
    ========================================================================== */
 
 /* --------------------------------------------------------------------------
-   1. Tokens
+   1. Tokens (tema claro por defecto; el oscuro sigue al sistema o al botón)
    -------------------------------------------------------------------------- */
 :root {
-  --marfil: #FAF3E3;           /* papel */
-  --lino: #F0E4CC;             /* final del degradado del papel */
-  --hueso: #FFFCF5;            /* tarjetas */
-  --porcelana: #FFFDF8;        /* plato */
-  --laton: #B8924A;            /* filetes y bordes */
-  --laton-oscuro: #6E5326;
-  --laton-texto: #7D5F27;      /* latón oscurecido: contraste AA como texto y foco */
-  --espresso: #3B2A20;         /* texto principal */
-  --cafe-leche: #8A7260;       /* texto grande secundario */
-  --cafe-leche-texto: #725D4D; /* texto pequeño secundario (AA sobre marfil y lino) */
-  --salvia-texto: #56694A;     /* confirmación de copiado */
+  --fondo: #EDECE8;
+  --superficie: #F8F7F4;
+  --tinta: #19191B;
+  --tinta-2: #57565F;
+  --linea: #D6D4CE;
+  --velo: rgba(237, 236, 232, .62);   /* atenúa los colores fuera de la armonía */
+  --sombra: rgba(25, 25, 27, .16);
 
-  --serif: "Cormorant Garamond", "Playfair Display", Georgia, "Times New Roman", serif;
-  --sans: "Inter", "Lato", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --display: "Bricolage Grotesque", "Arial Black", system-ui, sans-serif;
+  --texto: "Instrument Sans", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
 
-  --suave: cubic-bezier(.2, .8, .2, 1);
-  --duracion: 450ms;
+  --curva: cubic-bezier(.2, .9, .25, 1);
+  --rueda: min(86vw, 460px);
+  color-scheme: light;
+}
 
-  /* Tamaño de la rueda (se redefine en escritorio) */
-  --rueda: min(88vw, 520px);
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --fondo: #161618;
+    --superficie: #1F1F22;
+    --tinta: #F1F0EC;
+    --tinta-2: #A9A8A2;
+    --linea: #313136;
+    --velo: rgba(22, 22, 24, .5);
+    --sombra: rgba(0, 0, 0, .5);
+    color-scheme: dark;
+  }
+}
+
+:root[data-theme="dark"] {
+  --fondo: #161618;
+  --superficie: #1F1F22;
+  --tinta: #F1F0EC;
+  --tinta-2: #A9A8A2;
+  --linea: #313136;
+  --velo: rgba(22, 22, 24, .5);
+  --sombra: rgba(0, 0, 0, .5);
+  color-scheme: dark;
 }
 
 /* --------------------------------------------------------------------------
-   2. Base y papel
+   2. Base
    -------------------------------------------------------------------------- */
 *,
 *::before,
@@ -42,39 +63,39 @@
 }
 
 html {
-  background: var(--marfil);
-  color: var(--espresso);
+  background: var(--fondo);
   -webkit-text-size-adjust: 100%;
 }
 
 body {
   margin: 0;
-  background: var(--marfil);
-  font-family: var(--sans);
+  min-height: 100vh;
+  background: var(--fondo);
+  color: var(--tinta);
+  font-family: var(--texto);
   font-size: 1rem;
-  line-height: 1.6;
+  line-height: 1.5;
   -webkit-font-smoothing: antialiased;
   overflow-x: hidden;
-  position: relative;
-  isolation: isolate;
 }
 
-/* Papel: marfil que baja a lino a lo largo de toda la página, con trama de lino casi imperceptible */
-body {
-  min-height: 100vh;
+button,
+input {
+  font: inherit;
+  color: inherit;
 }
 
-body::before {
-  content: "";
-  position: absolute;
-  inset: 0;
-  z-index: -1;
-  pointer-events: none;
-  background-color: var(--marfil);
-  background-image:
-    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='240' height='240'%3E%3Cfilter id='h'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.01 0.95' numOctaves='2' seed='4' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 0.4 0 0 0 0 0.31 0 0 0 0 0.2 0 0 0 0.11 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23h)'/%3E%3C/svg%3E"),
-    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='240' height='240'%3E%3Cfilter id='v'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.95 0.01' numOctaves='2' seed='9' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 0.4 0 0 0 0 0.31 0 0 0 0 0.2 0 0 0 0.09 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23v)'/%3E%3C/svg%3E"),
-    linear-gradient(180deg, var(--marfil) 0%, var(--marfil) 40%, var(--lino) 100%);
+a {
+  color: inherit;
+}
+
+:focus {
+  outline: none;
+}
+
+:focus-visible {
+  outline: 2px solid var(--tinta);
+  outline-offset: 3px;
 }
 
 .solo-lector {
@@ -89,185 +110,168 @@ body::before {
   border: 0;
 }
 
-:focus {
-  outline: none;
-}
-
-:focus-visible {
-  outline: 2px solid var(--laton-texto);
-  outline-offset: 3px;
-}
-
 /* --------------------------------------------------------------------------
    3. Composición
-   Móvil: una columna. Escritorio: texto a la izquierda, plato a la derecha
-   ocupando dos filas, y las tarjetas debajo a todo el ancho.
+   Móvil: una columna (dial y debajo el panel). Escritorio: dos columnas.
    -------------------------------------------------------------------------- */
-.pagina {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr);
-  grid-template-areas:
-    "cabecera"
-    "lamina"
-    "lectura"
-    "triada"
-    "pie";
+.app {
   width: 100%;
   max-width: 76rem;
   margin: 0 auto;
-  padding: clamp(2.5rem, 7vw, 4.5rem) 1rem 2rem;
+  padding-inline: max(1rem, env(safe-area-inset-left));
+  padding-block: max(1rem, env(safe-area-inset-top)) 2rem;
 }
 
-.cabecera { grid-area: cabecera; }
-.lamina   { grid-area: lamina; }
-.lectura  { grid-area: lectura; }
-.triada   { grid-area: triada; }
-.pie      { grid-area: pie; }
+.principal {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 2.5rem;
+  margin-top: 1.5rem;
+}
 
-@media (min-width: 980px) {
+@media (min-width: 900px) {
   :root {
-    --rueda: min(600px, 50vw, 80vh);
+    --rueda: min(500px, 42vw, 68vh);
   }
 
-  .pagina {
-    grid-template-columns: minmax(0, 5fr) minmax(0, 7fr);
-    grid-template-rows: auto 1fr auto auto;
-    grid-template-areas:
-      "cabecera lamina"
-      "lectura  lamina"
-      "triada   triada"
-      "pie      pie";
-    column-gap: clamp(2.5rem, 5vw, 5rem);
-    padding: 4.5rem 2rem 2.5rem;
+  .app {
+    padding-inline: 2rem;
+    padding-block: 1.5rem 2.5rem;
+  }
+
+  .principal {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    gap: clamp(2rem, 5vw, 4.5rem);
+    align-items: start;
+    margin-top: 2rem;
+  }
+
+  .panel {
+    position: sticky;
+    top: 1.5rem;
   }
 }
 
 /* --------------------------------------------------------------------------
-   4. Encabezado
+   4. Cabecera
    -------------------------------------------------------------------------- */
-.titulo {
+.cabecera {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.marca {
+  display: flex;
+  align-items: center;
+  gap: .75rem;
+  min-width: 0;
+}
+
+.marca__icono {
+  flex: none;
+  width: 2.25rem;
+  height: 2.25rem;
+}
+
+.marca__titulo {
   margin: 0;
-  font-family: var(--serif);
-  font-weight: 600;
-  font-size: clamp(3.1rem, 1.6rem + 6.4vw, 6rem);
-  line-height: .9;
-  letter-spacing: -.02em;
-  color: var(--espresso);
-}
-
-.adorno {
-  display: block;
-  width: 7.5rem;
-  height: auto;
-  margin: 1.4rem 0 1.1rem;
-  overflow: visible;
-}
-
-.adorno line {
-  stroke: var(--laton);
-  stroke-width: 1;
-}
-
-.adorno path {
-  fill: var(--laton);
-}
-
-.subtitulo {
-  margin: 0;
-  max-width: 22ch;
-  font-family: var(--serif);
-  font-style: italic;
-  font-weight: 500;
-  font-size: clamp(1.45rem, 1.2rem + .9vw, 1.85rem);
-  line-height: 1.2;
-  color: var(--cafe-leche);
-}
-
-/* --------------------------------------------------------------------------
-   5. Lectura (texto de la lámina)
-   -------------------------------------------------------------------------- */
-.lectura {
-  max-width: 36rem;
-  margin-top: 2.5rem;
-}
-
-.lectura__intro {
-  margin: 0;
-  font-size: 1rem;
-  color: var(--cafe-leche-texto);
-}
-
-.lectura__triada {
-  margin-top: 2rem;
-  padding-top: 1.6rem;
-  border-top: 1px solid rgba(184, 146, 74, .45);
-}
-
-.lectura__titulo {
-  margin: 0;
-  font-family: var(--serif);
-  font-weight: 600;
-  font-size: clamp(2.1rem, 1.6rem + 1.6vw, 2.75rem);
-  line-height: 1;
+  font-family: var(--display);
+  font-weight: 800;
+  font-size: 1.25rem;
+  line-height: 1.1;
   letter-spacing: -.01em;
 }
 
-.lectura__colores {
-  margin: .45rem 0 0;
-  font-family: var(--serif);
-  font-style: italic;
-  font-size: 1.5rem;
-  line-height: 1.25;
-  color: var(--laton-texto);
+.marca__lema {
+  margin: 0;
+  font-size: .875rem;
+  color: var(--tinta-2);
 }
 
-.lectura__consejo {
-  margin: 1rem 0 0;
-  color: var(--espresso);
+.boton-icono {
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 2.75rem;
+  height: 2.75rem;
+  padding: 0;
+  background: var(--superficie);
+  border: 1px solid var(--linea);
+  border-radius: 12px;
+  cursor: pointer;
 }
 
-/* Al cambiar de tríada el texto se renueva con un fundido breve */
-.lectura__triada.renovando > * {
-  animation: renovar 420ms var(--suave);
+.boton-icono svg {
+  width: 1.25rem;
+  height: 1.25rem;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.7;
+  stroke-linecap: round;
+  stroke-linejoin: round;
 }
 
-@keyframes renovar {
-  from {
-    opacity: 0;
-    transform: translateY(4px);
-  }
-}
+/* Muestra el sol en tema oscuro (para volver al claro) y la luna en el claro */
+.icono-sol { display: none; }
+:root[data-theme="dark"] .icono-sol { display: block; }
+:root[data-theme="dark"] .icono-luna { display: none; }
 
-@media (min-width: 980px) {
-  .lectura {
-    align-self: end;
-    margin-top: 3rem;
-  }
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) .icono-sol { display: block; }
+  :root:not([data-theme="light"]) .icono-luna { display: none; }
 }
 
 /* --------------------------------------------------------------------------
-   6. La lámina con el plato
+   5. Dial: lectura en vivo y rueda
    -------------------------------------------------------------------------- */
-.lamina {
+.dial {
   display: flex;
   flex-direction: column;
   align-items: center;
-  /* el colgante sobresale por arriba del plato */
-  padding-top: calc(var(--rueda) * .07);
-  margin-top: 2.25rem;
+  min-width: 0;
 }
 
-@media (min-width: 980px) {
-  .lamina {
-    margin-top: 0;
-    justify-self: end;
-  }
+/* Lectura: el nombre ocupa una sola línea y se adapta al ancho (no mueve la página al girar) */
+.lectura {
+  align-self: stretch;
+  container-type: inline-size;
+  contain: layout paint;
+}
+
+.lectura__nombre {
+  margin: 0;
+  font-family: var(--display);
+  font-weight: 800;
+  font-size: clamp(2.1rem, 9vw, 3.6rem);
+  font-size: clamp(2.1rem, 10.5cqi, 4.25rem);
+  line-height: 1.05;
+  letter-spacing: -.025em;
+  white-space: nowrap;
+}
+
+.lectura__datos {
+  display: flex;
+  flex-wrap: wrap;
+  gap: .25rem 1rem;
+  margin: .5rem 0 0;
+  color: var(--tinta-2);
+  font-variant-numeric: tabular-nums;
+}
+
+.lectura__hex {
+  color: var(--tinta);
+  font-weight: 600;
+  letter-spacing: .02em;
 }
 
 .rueda-marco {
   position: relative;
   width: var(--rueda);
-  height: var(--rueda);
+  max-width: 100%;
+  aspect-ratio: 1;
+  margin-top: 1.25rem;
 }
 
 .rueda {
@@ -275,7 +279,7 @@ body::before {
   inset: 0;
   border-radius: 50%;
   cursor: grab;
-  /* el desplazamiento vertical solo se permite desde el disco central: en el anillo,
+  /* el desplazamiento vertical solo se permite desde el centro: sobre el anillo,
      js/app.js cancela el gesto del navegador para que el dedo gire la rueda */
   touch-action: pan-y;
   user-select: none;
@@ -290,492 +294,453 @@ body::before {
 }
 
 .rueda:focus-visible {
-  outline-offset: 12px;
+  outline-offset: 6px;
 }
 
-/* Plato: filo dorado fino y porcelana con un leve hundimiento hacia el centro */
-.rueda__plato {
+/* Disco de fondo con la sombra (estático: no se repinta nunca) */
+.rueda__base {
+  position: absolute;
+  inset: 7.9%;
+  border-radius: 50%;
+  background: var(--fondo);
+  box-shadow: 0 18px 44px -22px var(--sombra), 0 2px 6px -3px var(--sombra);
+}
+
+/* Ventana cuadrada que recorta las esquinas del rotor girado (recorte rectangular: el más barato) */
+.rueda__ventana {
   position: absolute;
   inset: 0;
-  border-radius: 50%;
-  background: linear-gradient(140deg, #CDAB66, #A9853F 45%, #C6A35D 70%, #9C7A3C);
-  box-shadow:
-    0 1px 1px rgba(59, 42, 32, .25),
-    0 24px 40px -26px rgba(59, 42, 32, .55),
-    0 50px 70px -50px rgba(59, 42, 32, .35);
+  overflow: hidden;
 }
 
-.rueda__plato::before {
-  content: "";
-  position: absolute;
-  inset: 1.1%;
-  border-radius: 50%;
-  background: radial-gradient(circle, var(--porcelana) 0 80%, #F6EEDD 97%, #EFE3CB 100%);
-}
-
+/* Rotor: capa propia en la GPU. Gira con transform; su dibujo no cambia */
 .rueda__rotor {
   position: absolute;
   inset: 0;
   will-change: transform;
 }
 
-.rueda__rotor svg {
+.rueda__anillo,
+.rueda__capa,
+.rueda__capa svg {
+  position: absolute;
+  inset: 0;
   display: block;
   width: 100%;
   height: 100%;
   overflow: visible;
 }
 
-/* Tornillo central */
-.rueda__eje {
+.segmento {
+  cursor: pointer;
+}
+
+/* Disco central con el color que señala el puntero (capa propia: al cambiar
+   de color solo se repinta este círculo) */
+.rueda__centro {
   position: absolute;
-  left: 50%;
-  top: 50%;
-  width: 3.6%;
-  aspect-ratio: 1;
+  inset: 26.7%;
   border-radius: 50%;
-  transform: translate(-50%, -50%);
-  background: radial-gradient(circle at 40% 35%, #D9BD80, #A9853F 60%, #7E6230);
-  box-shadow: 0 1px 2px rgba(59, 42, 32, .35);
+  background-color: #FFD400;
+  box-shadow: inset 0 0 0 1px rgba(0, 0, 0, .06);
+  transition: background-color 260ms var(--curva);
+  will-change: transform;
   pointer-events: none;
 }
 
-.rueda__eje::after {
-  content: "";
-  position: absolute;
-  left: 22%;
-  right: 22%;
-  top: 50%;
-  height: 1px;
-  background: rgba(70, 50, 20, .55);
-  transform: rotate(-35deg);
+/* Capa de la armonía: gira sola hasta la nueva posición */
+.rueda__capa {
+  will-change: transform;
+  transition: transform 420ms var(--curva), opacity 300ms var(--curva);
+  pointer-events: none;
 }
 
-/* Colgante: su punta toca los grabados; oscila desde la perla */
-.rueda__colgante {
+.rueda__capa.inmediata {
+  transition: opacity 300ms var(--curva);
+}
+
+.velo {
+  fill: var(--velo);
+}
+
+.poligono {
+  fill: none;
+  stroke-linejoin: round;
+  stroke-linecap: round;
+}
+
+.poligono--halo {
+  stroke: rgba(0, 0, 0, .22);
+  stroke-width: 3.6;
+}
+
+.poligono--linea {
+  stroke: #FFFFFF;
+  stroke-width: 1.6;
+}
+
+.marcador {
+  fill: none;
+}
+
+.marcador--halo {
+  stroke: rgba(0, 0, 0, .28);
+  stroke-width: 4.6;
+}
+
+.marcador--anillo {
+  stroke: #FFFFFF;
+  stroke-width: 2.6;
+}
+
+/* Puntero fijo sobre la rueda */
+.rueda__puntero {
   position: absolute;
-  left: 46.6%;
-  top: -7%;
-  width: 6.8%;
+  left: 46.25%;
+  top: 2.3%;
+  width: 7.5%;
   height: auto;
-  transform-origin: 50% 30.9%;
-  filter: drop-shadow(0 2px 2px rgba(59, 42, 32, .3));
+  fill: var(--tinta);
   pointer-events: none;
-  overflow: visible;
 }
 
-#colgante-color {
-  transition: fill 200ms linear;
-}
-
-.lamina__pie {
+.dial__pie {
   display: flex;
   flex-wrap: wrap;
-  align-items: baseline;
+  align-items: center;
   justify-content: center;
-  gap: .5rem 1.5rem;
-  max-width: var(--rueda);
-  margin-top: 2rem;
+  gap: .75rem 1.25rem;
+  margin-top: 1.25rem;
+}
+
+.dial__ayuda {
+  margin: 0;
   font-size: .875rem;
-  color: var(--cafe-leche-texto);
+  color: var(--tinta-2);
   text-align: center;
 }
 
-.lamina__ayuda {
-  margin: 0;
-}
-
-.lamina__teclado {
+.dial__teclado {
   display: block;
 }
 
 @media (hover: none) and (pointer: coarse) {
-  .lamina__teclado {
+  .dial__teclado {
     display: none;
   }
 }
 
-/* Interruptor de sonido: un botón de texto, discreto */
-.sonido {
+/* --------------------------------------------------------------------------
+   6. Botones y controles segmentados
+   -------------------------------------------------------------------------- */
+.boton {
   display: inline-flex;
   align-items: center;
-  gap: .4rem;
-  padding: .25rem 0;
-  font: inherit;
-  color: var(--laton-texto);
-  background: none;
-  border: 0;
-  border-bottom: 1px solid rgba(184, 146, 74, .5);
-  cursor: pointer;
-}
-
-.sonido svg {
-  width: 1.05rem;
-  height: 1.05rem;
-  fill: none;
-  stroke: currentColor;
-  stroke-width: 1.5;
-  stroke-linecap: round;
-  stroke-linejoin: round;
-}
-
-.sonido[aria-pressed="true"] .sonido__cruz,
-.sonido[aria-pressed="false"] .sonido__ondas {
-  display: none;
-}
-
-/* --------------------------------------------------------------------------
-   7. Elementos del SVG del plato (creados por js/app.js)
-   -------------------------------------------------------------------------- */
-.segmento {
-  cursor: pointer;
-  transition: opacity var(--duracion) var(--suave);
-}
-
-/* Con una tríada elegida, el resto se atenúa un poco */
-.con-seleccion .segmento:not(.en-triada) {
-  opacity: .7;
-}
-
-@media (hover: hover) {
-  .con-seleccion .rueda:not(.arrastrando) .segmento:not(.en-triada):hover {
-    opacity: .95;
-  }
-}
-
-.grano,
-.filetes,
-.grabados,
-.centro,
-.fantasma,
-.triangulo,
-.realces {
-  pointer-events: none;
-}
-
-/* Grano del esmalte pintado a mano */
-.grano {
-  mix-blend-mode: multiply;
-  opacity: .38;
-}
-
-.filete {
-  fill: none;
-  stroke: var(--laton);
-}
-
-.rotulo {
-  font-family: var(--serif);
-  font-style: italic;
-  font-weight: 500;
-  font-size: 12.5px;
-  letter-spacing: .01em;
-  fill: var(--espresso);
-  transition: opacity var(--duracion) var(--suave), fill var(--duracion) var(--suave);
-}
-
-.con-seleccion .rotulo:not(.en-triada) {
-  opacity: .55;
-}
-
-.rotulo.en-triada {
-  font-weight: 600;
-  fill: var(--laton-oscuro);
-}
-
-.marca {
-  stroke: var(--laton);
-  stroke-width: .5;
-}
-
-.marca--larga {
-  stroke-width: .9;
-}
-
-/* Copias elevadas de la tríada: borde dorado, algo más grandes y con sombra */
-.realce {
-  opacity: 0;
-  transform: scale(1);
-  transform-box: view-box;   /* el origen (centroide del segmento) lo fija JS */
-  transition:
-    opacity 360ms var(--suave),
-    transform var(--duracion) var(--suave);
-}
-
-.realce.activo {
-  opacity: 1;
-  transform: scale(1.055);
-}
-
-.realce.activo.principal {
-  transform: scale(1.08);
-}
-
-.realce__borde {
-  fill: none;
-  stroke: var(--laton);
-  stroke-width: 2.2;
-  stroke-linejoin: round;
-}
-
-.centro__disco {
-  fill: #FBF5E8;
-}
-
-/* Triángulo punteado: anticipa la tríada del color bajo el ratón o el colgante */
-.fantasma {
-  opacity: 0;
-  transform-box: view-box;
-  transform-origin: 0 0;
-  transition: opacity 240ms var(--suave), transform 380ms var(--suave);
-}
-
-.fantasma.visible {
-  opacity: .8;
-}
-
-.fantasma path {
-  fill: none;
-  stroke: var(--cafe-leche);
-  stroke-width: .9;
-  stroke-dasharray: 2.5 3.5;
-  stroke-linejoin: round;
-}
-
-/* Triángulo dorado de la tríada */
-.triangulo {
-  opacity: 0;
-  transform-box: view-box;
-  transform-origin: 0 0;       /* (0,0) es el centro del viewBox */
-  transition:
-    transform 520ms var(--suave),
-    opacity 400ms var(--suave);
-}
-
-.con-seleccion .triangulo {
-  opacity: 1;
-}
-
-.triangulo__trazo {
-  fill: none;
-  stroke: var(--laton);
-  stroke-width: 1.2;
-  stroke-linejoin: round;
-  stroke-dasharray: 1;
-}
-
-.triangulo__vertice {
-  stroke: var(--laton);
-  stroke-width: 1.4;
-  transition: fill 400ms var(--suave);
-}
-
-/* --------------------------------------------------------------------------
-   8. Tarjetas de la tríada
-   La del color elegido es mayor; las otras dos, compañeras, más pequeñas.
-   -------------------------------------------------------------------------- */
-.triada {
-  margin-top: clamp(2.5rem, 6vw, 4rem);
-}
-
-.tarjetas {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: .75rem;
-}
-
-.tarjeta {
-  position: relative;
-  display: flex;
-  flex-direction: column;
-  align-items: flex-start;
-  gap: .9rem;
-  /* abajo queda sitio para "Copiar" */
-  padding: 1.1rem 1.1rem 2.4rem;
-  font: inherit;
-  text-align: left;
-  color: var(--espresso);
-  background: var(--hueso);
-  border: 1px solid rgba(184, 146, 74, .65);
-  border-radius: 10px;
-  box-shadow: 0 1px 2px rgba(59, 42, 32, .06), 0 10px 22px -18px rgba(59, 42, 32, .5);
-  cursor: pointer;
-  -webkit-tap-highlight-color: transparent;
-  transition: border-color 300ms var(--suave), box-shadow 300ms var(--suave);
-}
-
-@media (hover: hover) {
-  .tarjeta:hover {
-    border-color: var(--laton);
-    box-shadow: 0 1px 2px rgba(59, 42, 32, .06), 0 16px 28px -18px rgba(59, 42, 32, .55);
-  }
-}
-
-.tarjeta:active {
-  background: #FFF8EC;
-}
-
-/* Tarjeta principal: ocupa las dos columnas en móvil y es más ancha en escritorio */
-.tarjeta--principal {
-  grid-column: 1 / -1;
-  flex-direction: row;
-  align-items: center;
-  gap: 1.25rem;
-  padding: 1.35rem 1.4rem;
-  border-color: var(--laton);
-}
-
-/* Muestra circular con filete dorado */
-.tarjeta__muestra {
-  flex: none;
-  width: 2.6rem;
-  height: 2.6rem;
-  border-radius: 50%;
-  background-color: var(--muestra, #FFD400);
-  box-shadow: 0 0 0 3px var(--hueso), 0 0 0 4px var(--laton);
-  transition: background-color 400ms var(--suave);
-}
-
-.tarjeta--principal .tarjeta__muestra {
-  width: 4.5rem;
-  height: 4.5rem;
-}
-
-.tarjeta__texto {
-  display: flex;
-  flex-direction: column;
-  min-width: 0;
-}
-
-.tarjeta__nombre {
-  font-family: var(--serif);
-  font-weight: 600;
-  font-size: 1.4rem;
-  line-height: 1.05;
-  overflow-wrap: anywhere;
-}
-
-.tarjeta--principal .tarjeta__nombre {
-  font-size: 2rem;
-}
-
-.tarjeta__categoria {
-  margin-top: .2rem;
-  font-size: .8125rem;
-  color: var(--cafe-leche-texto);
-}
-
-.tarjeta__codigos {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: baseline;
-  gap: .1rem .6rem;
-  margin-top: .55rem;
-  font-variant-numeric: tabular-nums;
-}
-
-.tarjeta__hex {
+  gap: .5rem;
+  min-height: 2.75rem;
+  padding: .55rem 1rem;
   font-size: .9375rem;
   font-weight: 500;
+  background: var(--superficie);
+  border: 1px solid var(--linea);
+  border-radius: 12px;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+  transition: transform 160ms var(--curva);
+}
+
+.boton:active {
+  transform: scale(.97);
+}
+
+@media (hover: hover) {
+  .boton:hover,
+  .boton-icono:hover {
+    border-color: var(--tinta-2);
+  }
+}
+
+.boton svg {
+  width: 1.15rem;
+  height: 1.15rem;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.6;
+}
+
+.boton svg circle {
+  fill: currentColor;
+  stroke: none;
+}
+
+/* Control segmentado (armonías y formato) hecho con radios nativos */
+.armonias,
+.formato {
+  display: flex;
+  gap: 2px;
+  padding: 4px;
+  background: var(--superficie);
+  border: 1px solid var(--linea);
+  border-radius: 14px;
+}
+
+/* Las armonías pasan a dos filas cuando no caben en una */
+.armonias {
+  flex-wrap: wrap;
+}
+
+.opcion {
+  position: relative;
+  flex: 1 1 auto;
+}
+
+.opcion input {
+  position: absolute;
+  inset: 0;
+  margin: 0;
+  opacity: 0;
+  cursor: pointer;
+}
+
+.opcion span {
+  display: block;
+  padding: .55rem .85rem;
+  font-size: .9375rem;
+  font-weight: 500;
+  text-align: center;
+  white-space: nowrap;
+  border-radius: 10px;
+  color: var(--tinta-2);
+  transition: background-color 200ms var(--curva), color 200ms var(--curva);
+}
+
+.opcion input:checked + span {
+  background: var(--tinta);
+  color: var(--fondo);
+}
+
+.opcion input:focus-visible + span {
+  outline: 2px solid var(--tinta);
+  outline-offset: 2px;
+}
+
+.opcion--pequena span {
+  padding: .4rem .7rem;
+  font-size: .8125rem;
   letter-spacing: .03em;
 }
 
-.tarjeta__rgb {
-  font-size: .75rem;
-  color: var(--cafe-leche-texto);
+/* --------------------------------------------------------------------------
+   7. Panel: armonía y paleta
+   -------------------------------------------------------------------------- */
+.panel {
+  min-width: 0;
 }
 
-/* Posición del color en la rueda, en cifras de la serif */
-.tarjeta__grados {
-  position: absolute;
-  top: .7rem;
-  right: .9rem;
-  font-family: var(--serif);
-  font-style: italic;
-  font-size: 1.05rem;
-  color: var(--cafe-leche);
+.panel__titulo {
+  margin: 1.5rem 0 0;
+  font-family: var(--display);
+  font-weight: 800;
+  font-size: clamp(1.6rem, 1.2rem + 1.4vw, 2.1rem);
+  line-height: 1.1;
+  letter-spacing: -.02em;
+  text-wrap: balance;
 }
 
-.tarjeta__accion {
-  position: absolute;
-  right: .9rem;
-  bottom: .75rem;
-  font-size: .75rem;
-  font-weight: 500;
-  color: var(--laton-texto);
+.panel__texto {
+  max-width: 46ch;
+  margin: .5rem 0 0;
+  color: var(--tinta-2);
 }
 
-.tarjeta.copiada .tarjeta__accion {
-  color: var(--salvia-texto);
+.muestras {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: .75rem;
+  margin: 1.5rem 0 0;
+  padding: 0;
+  list-style: none;
 }
 
-@media (min-width: 640px) {
-  .tarjetas {
-    grid-template-columns: minmax(0, 1.7fr) minmax(0, 1fr) minmax(0, 1fr);
-    gap: 1rem;
-  }
-
-  .tarjeta--principal {
-    grid-column: auto;
+@media (min-width: 560px) {
+  .muestras {
+    grid-template-columns: repeat(var(--n, 3), minmax(0, 1fr));
   }
 }
 
-/* Copiar los tres códigos: botón de texto subrayado en latón */
-.copiar-todo {
-  margin-top: 1.25rem;
-  padding: .3rem 0;
-  font: inherit;
-  font-size: .9375rem;
-  color: var(--espresso);
-  background: none;
+.muestra {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 0;
+  animation: muestra-entra 360ms var(--curva) backwards;
+  animation-delay: calc(var(--i, 0) * 50ms);
+}
+
+@keyframes muestra-entra {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+}
+
+/* Bloque de color: el texto va encima en blanco o negro, según cuál se lea mejor */
+.muestra__bloque {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  gap: 1rem;
+  min-height: 7.5rem;
+  padding: .9rem 1rem;
+  text-align: left;
+  color: var(--sobre, #141416);
+  background-color: var(--c, #FFD400);
   border: 0;
-  border-bottom: 1px solid var(--laton);
+  border-radius: 16px;
   cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+  transition: background-color 360ms var(--curva), color 360ms var(--curva), transform 160ms var(--curva);
 }
 
-@media (hover: hover) {
-  .copiar-todo:hover {
-    color: var(--laton-texto);
+@media (min-width: 560px) {
+  .muestra__bloque {
+    min-height: 11rem;
   }
+}
+
+.muestra__bloque:active {
+  transform: scale(.98);
+}
+
+.muestra__cabeza,
+.muestra__pie {
+  display: flex;
+  flex-direction: column;
+  gap: .1rem;
+  min-width: 0;
+}
+
+.muestra__cabeza {
+  flex-direction: row;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: .1rem .5rem;
+  white-space: nowrap;
+  font-size: .8125rem;
+  font-weight: 500;
+}
+
+.muestra__contraste {
+  font-variant-numeric: tabular-nums;
+  opacity: .85;
+}
+
+.muestra__nombre {
+  font-family: var(--display);
+  font-weight: 600;
+  font-size: 1.25rem;
+  line-height: 1.1;
+  overflow-wrap: anywhere;
+}
+
+.muestra__valor {
+  font-size: .875rem;
+  font-weight: 500;
+  letter-spacing: .02em;
+  font-variant-numeric: tabular-nums;
+  overflow-wrap: anywhere;
+}
+
+/* Tonos: del más claro al más oscuro */
+.muestra__tonos {
+  display: flex;
+  gap: 4px;
+}
+
+.tono {
+  flex: 1;
+  height: 2rem;
+  padding: 0;
+  background-color: var(--t);
+  border: 0;
+  border-radius: 8px;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+  transition: background-color 360ms var(--curva), transform 160ms var(--curva);
+}
+
+.tono:active {
+  transform: scale(.94);
+}
+
+/* En el tema oscuro, el tono más oscuro necesita un borde para verse */
+.tono:last-child {
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, .08);
+}
+
+.panel__nota {
+  margin: .75rem 0 0;
+  font-size: .8125rem;
+  color: var(--tinta-2);
+}
+
+.acciones {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: .75rem;
+  margin-top: 1.5rem;
+}
+
+.acciones__botones {
+  display: flex;
+  flex-wrap: wrap;
+  gap: .5rem;
 }
 
 /* --------------------------------------------------------------------------
-   9. Pie
+   8. Pie
    -------------------------------------------------------------------------- */
 .pie {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: .5rem 2rem;
   margin-top: 3.5rem;
   padding-top: 1.25rem;
-  border-top: 1px solid rgba(184, 146, 74, .35);
+  border-top: 1px solid var(--linea);
   font-size: .8125rem;
-  color: var(--cafe-leche-texto);
+  color: var(--tinta-2);
 }
 
 .pie p {
+  max-width: 60ch;
   margin: 0;
 }
 
 /* --------------------------------------------------------------------------
-   10. Aviso al copiar
+   9. Aviso al copiar
    -------------------------------------------------------------------------- */
 .aviso {
   position: fixed;
   left: 50%;
-  bottom: max(1.25rem, env(safe-area-inset-bottom));
+  bottom: calc(1rem + env(safe-area-inset-bottom, 0px));
   z-index: 10;
   display: flex;
   align-items: center;
   gap: .6rem;
   max-width: calc(100vw - 2rem);
-  padding: .65rem 1rem;
+  padding: .7rem 1rem;
   font-size: .875rem;
-  color: var(--marfil);
-  background: var(--espresso);
-  border-radius: 6px;
-  box-shadow: 0 12px 26px -14px rgba(59, 42, 32, .7);
+  font-weight: 500;
+  color: var(--fondo);
+  background: var(--tinta);
+  border-radius: 12px;
   opacity: 0;
-  transform: translate(-50%, .75rem);
+  transform: translate(-50%, 10px);
   pointer-events: none;
-  transition: opacity 300ms var(--suave), transform 400ms var(--suave);
+  transition: opacity 220ms var(--curva), transform 320ms var(--curva);
 }
 
 .aviso.visible {
@@ -783,20 +748,24 @@ body::before {
   transform: translate(-50%, 0);
 }
 
-.aviso__muestra {
+.aviso__muestras {
+  display: flex;
   flex: none;
-  width: .8rem;
-  height: .8rem;
+}
+
+.aviso__muestra {
+  width: .9rem;
+  height: .9rem;
   border-radius: 50%;
-  box-shadow: 0 0 0 1.5px var(--espresso), 0 0 0 2.5px var(--laton);
+  box-shadow: 0 0 0 2px var(--tinta);
 }
 
 .aviso__muestra + .aviso__muestra {
-  margin-left: -.35rem;
+  margin-left: -.3rem;
 }
 
 /* --------------------------------------------------------------------------
-   11. Movimiento reducido
+   10. Movimiento reducido
    -------------------------------------------------------------------------- */
 @media (prefers-reduced-motion: reduce) {
   *,
@@ -805,6 +774,5 @@ body::before {
     transition-duration: 1ms !important;
     animation-duration: 1ms !important;
     animation-delay: 0ms !important;
-    scroll-behavior: auto !important;
   }
 }
