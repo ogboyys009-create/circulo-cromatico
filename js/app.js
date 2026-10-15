@@ -1,13 +1,14 @@
 /* ==========================================================================
    Círculo Cromático — js/app.js
 
-   Rueda RYB de 96 colores con armonías (tríada, complementario, análogo,
-   complementario dividido y tétrada), tonos, copia en HEX/RGB/HSL, enlace
-   para compartir y búsqueda por código: cualquier color (HEX, RGB, HSL o un
-   nombre) se traduce al círculo RYB y se calculan sus armonías.
+   Una sola rueda con tres pestañas:
+   - Color: círculo RYB de 96 colores con armonías (tríada, complementario,
+     análogo, complementario dividido y tétrada) y búsqueda por código.
+   - Tonos: 48 tintes y sombras del color elegido, con su escala 50–950.
+   - Grises: 48 grises del blanco al negro (neutros, cálidos o fríos).
 
    Rendimiento:
-   - El anillo se dibuja una sola vez. Al girar solo cambia un transform.
+   - El anillo se dibuja una vez por pestaña. Al girar solo cambia un transform.
    - Al soltar, el giro (inercia y muelle) se calcula de antemano y se
      reproduce con Web Animations: lo ejecuta el compositor del navegador,
      así va fluido aunque el hilo principal esté ocupado.
@@ -61,8 +62,9 @@
     return 'intermedio';
   }
 
-  const TOTAL = COLORES.length;   // 96
-  const PASO = 360 / TOTAL;       // 3,75° por color
+  const NC = COLORES.length;   // 96 colores en la pestaña Color
+  const NE = 48;               // 48 pasos en las ruedas de tonos y de grises
+  const BASE_TONAL = 24;       // posición del color base en la rueda de tonos
 
   /** Armonías: posiciones relativas al color elegido (en pasos de 3,75°). */
   const ARMONIAS = {
@@ -105,15 +107,30 @@
     intermedio: 'Tríada intermedia',
   };
 
+  /** Temperatura de los grises: un toque de matiz que se apaga hacia el blanco y el negro. */
+  const TEMPERATURAS = {
+    neutro: { nombre: 'Neutro', plural: 'neutros', h: 0, s: 0 },
+    calido: { nombre: 'Cálido', plural: 'cálidos', h: 38, s: 11 },
+    frio: { nombre: 'Frío', plural: 'fríos', h: 215, s: 11 },
+  };
+
+  /** Escala 50–950: mezcla con blanco (hacia el 50) o con negro (hacia el 950). El 500 es el color. */
+  const PASOS_ESCALA = [50, 100, 200, 300, 400, 500, 600, 700, 800, 900, 950];
+  const MEZCLAS_ESCALA = [['#FFFFFF', 0.92], ['#FFFFFF', 0.82], ['#FFFFFF', 0.64], ['#FFFFFF', 0.46], ['#FFFFFF', 0.24], [null, 0],
+    ['#000000', 0.18], ['#000000', 0.36], ['#000000', 0.52], ['#000000', 0.68], ['#000000', 0.8]];
+  const LUCES_GRIS = [98, 95, 89, 81, 64, 46, 36, 28, 18, 11, 6];
+
   /** Geometría del dibujo en unidades del viewBox (-120 … 120). */
-  const GEO = { exterior: 100, interior: 64, marcador: 82, hueco: 0.9, esquina: 0.7 };
+  const GEO = { exterior: 100, interior: 64, marcador: 82 };
+  const HUECOS = { 96: [0.9, 0.7], 48: [1.5, 1.6] };   // hueco y esquina según el número de sectores
   const RADIO_CENTRO = 56;          // disco central (zona para desplazar la página en táctil)
 
   const MUELLE = { w: 0.013, z: 0.82 };   // asentado con un rebote casi imperceptible
   const PROYECCION = 300;                 // ms de vuelo libre que se suman al lanzar la rueda
   const UMBRAL_ARRASTRE = 6;              // px para distinguir arrastre de toque
-  const SALTO = 8;                        // Mayús + flecha o RePág/AvPág: 30°
+  const SALTO = 8;                        // Mayús + flecha o RePág/AvPág
   const OSCURO = '#141416';
+  const AA = 4.5;                         // contraste mínimo para texto (WCAG AA)
 
   const SVG_NS = 'http://www.w3.org/2000/svg';
   const preferenciaMovimiento = window.matchMedia('(prefers-reduced-motion: reduce)');
@@ -140,19 +157,28 @@
   const previa = $('codigo-muestra');
   const aviso = $('aviso');
   const anunciador = $('anunciador');
+  const indicador = document.querySelector('.pestanas__indicador');
+  const pestanas = Array.from(document.querySelectorAll('[role="tab"]'));
 
   /* ------------------------------------------------------------------------
      3. Estado
      ------------------------------------------------------------------------ */
-  const estado = {
-    seleccionado: 0,   // color de la rueda elegido (o el más parecido al código propio)
-    vista: -1,         // color que se muestra (bajo el puntero al arrastrar)
-    personal: null,    // código propio: { hex, hsl, x, indice } o null
-    modo: 'triada',
+  const est = {
+    activa: 'color',
     formato: 'hex',
-    anguloCapa: 0,     // giro de la capa de armonía dentro de la rueda
     tactil: false,
+    vista: -1,         // posición que se muestra (bajo el puntero al arrastrar)
+    marcado: 0,        // posición con aria-selected en el anillo actual
+    anguloCapa: 0,     // giro de la capa de armonía dentro de la rueda (pestaña Color)
+    color: { indice: 0, personal: null, modo: 'triada', angulo: 0 },
+    tonos: { indice: BASE_TONAL, base: null, angulo: -BASE_TONAL * (360 / NE) },
+    grises: { indice: 0, temperatura: 'neutro', angulo: 0 },
   };
+
+  // Rueda activa: número de sectores, grados por sector y sus colores
+  let TOTAL = NC;
+  let PASO = 360 / TOTAL;
+  let anillo = COLORES;
 
   // Giro de la rueda: ángulo en reposo y animación en curso (Web Animations)
   const mov = { x: 0, anim: null, puntos: null };
@@ -168,6 +194,7 @@
   const indiceEn = (angulo) => mod(Math.round(-angulo / PASO), TOTAL);
   /** "3,75°" con coma decimal. */
   const grados = (g) => `${String(redondear(g)).replace('.', ',')}°`;
+  const ratio = (r) => `${r.toFixed(1).replace('.', ',')}:1`;
 
   /** Lleva un ángulo a (-180, 180] para girar por el camino corto. */
   function normalizar(a) {
@@ -253,11 +280,8 @@
     return 0.2126 * r + 0.7152 * g + 0.0722 * b;
   }
 
-  function contraste(a, b) {
-    const la = luminancia(a);
-    const lb = luminancia(b);
-    return (Math.max(la, lb) + 0.05) / (Math.min(la, lb) + 0.05);
-  }
+  const contrasteLum = (la, lb) => (Math.max(la, lb) + 0.05) / (Math.min(la, lb) + 0.05);
+  const contraste = (a, b) => contrasteLum(luminancia(a), luminancia(b));
 
   /** Color de texto que mejor se lee sobre "hex" (blanco o casi negro) y su contraste. */
   function textoSobre(hex) {
@@ -287,17 +311,17 @@
      al revés, interpolando entre vecinos. */
   const MATIZ = (() => {
     const u = [COLORES[0].hsl[0]];
-    for (let i = 1; i <= TOTAL; i++) {
-      const h = COLORES[i % TOTAL].hsl[0];
+    for (let i = 1; i <= NC; i++) {
+      const h = COLORES[i % NC].hsl[0];
       u.push(u[i - 1] - mod(u[i - 1] - h, 360));
     }
     return u;
   })();
 
-  /** Posición en la rueda (índice con decimales, 0 … 96) de un matiz HSL. */
+  /** Posición en la rueda de color (índice con decimales, 0 … 96) de un matiz HSL. */
   function posicionDeMatiz(h) {
     const bajada = mod(MATIZ[0] - h, 360);
-    for (let i = 0; i < TOTAL; i++) {
+    for (let i = 0; i < NC; i++) {
       const a = MATIZ[0] - MATIZ[i];
       const b = MATIZ[0] - MATIZ[i + 1];
       if (bajada >= a && bajada <= b) return i + (b > a ? (bajada - a) / (b - a) : 0);
@@ -307,11 +331,11 @@
 
   /** Color de la rueda (en HSL) en una posición con decimales. */
   function hslEnPosicion(x) {
-    const p = mod(x, TOTAL);
+    const p = mod(x, NC);
     const i = Math.floor(p);
     const t = p - i;
     const a = COLORES[i].hsl;
-    const b = COLORES[(i + 1) % TOTAL].hsl;
+    const b = COLORES[(i + 1) % NC].hsl;
     return [mod(MATIZ[i] + (MATIZ[i + 1] - MATIZ[i]) * t, 360), a[1] + (b[1] - a[1]) * t, a[2] + (b[2] - a[2]) * t];
   }
 
@@ -330,26 +354,81 @@
     return hslAHex(obj[0], s2, l2);
   }
 
-  const cercanoEnRueda = (hex) => COLORES[mod(Math.round(posicionDeMatiz(hslDe(hex)[0])), TOTAL)];
+  const cercanoEnRueda = (hex) => COLORES[mod(Math.round(posicionDeMatiz(hslDe(hex)[0])), NC)];
 
   /** Datos de un código propio. Grises, blanco y negro se marcan como neutros (sin matiz). */
   function crearPersonal(hex) {
     const hsl = hslDe(hex);
     const x = posicionDeMatiz(hsl[0]);
     const neutro = hsl[1] < 6 || hsl[2] < 4 || hsl[2] > 97;
-    return { hex, hsl, x, indice: mod(Math.round(x), TOTAL), neutro };
+    return { hex, hsl, x, indice: mod(Math.round(x), NC), neutro };
   }
 
   /* ------------------------------------------------------------------------
-     5. Dibujo de la rueda
+     5. Ruedas de tonos y de grises
+     ------------------------------------------------------------------------ */
+
+  /** Color elegido en la pestaña Color (de la rueda o código propio): la base de los tonos. */
+  const baseHex = () => (est.color.personal ? est.color.personal.hex : COLORES[est.color.indice].hex);
+  const nombreBase = () => (est.color.personal ? est.color.personal.hex : COLORES[est.color.indice].nombre);
+  const slugBase = () => (est.color.personal ? 'color' : COLORES[est.color.indice].slug);
+
+  /** 48 pasos: tintes (con blanco) arriba, el color base abajo y sombras (con negro) de vuelta. */
+  function anilloTonal(base) {
+    const lista = [];
+    for (let i = 0; i < NE; i++) {
+      let hex;
+      let nombre;
+      if (i < BASE_TONAL) {
+        const t = ((BASE_TONAL - i) / BASE_TONAL) * 0.94;
+        hex = mezclar(base, '#FFFFFF', t);
+        nombre = `Tinte ${Math.round(t * 100)} %`;
+      } else if (i === BASE_TONAL) {
+        hex = base;
+        nombre = 'Color base';
+      } else {
+        const t = ((i - BASE_TONAL) / (NE - 1 - BASE_TONAL)) * 0.9;
+        hex = mezclar(base, '#000000', t);
+        nombre = `Sombra ${Math.round(t * 100)} %`;
+      }
+      lista.push({ hex, nombre, lum: luminancia(hex) });
+    }
+    return lista;
+  }
+
+  function grisEn(luz, temperatura) {
+    const t = TEMPERATURAS[temperatura];
+    const s = t.s * (1 - Math.pow((2 * luz) / 100 - 1, 2));
+    return hslAHex(t.h, s, luz);
+  }
+
+  /** 48 grises del blanco (0°) al negro. */
+  function anilloGrises(temperatura) {
+    return Array.from({ length: NE }, (_, i) => {
+      const luz = 100 * (1 - i / (NE - 1));
+      const hex = grisEn(luz, temperatura);
+      const nombre = i === 0 ? 'Blanco' : i === NE - 1 ? 'Negro' : `Gris ${Math.round(luz)} %`;
+      return { hex, nombre, lum: luminancia(hex) };
+    });
+  }
+
+  const escalaTonal = (base) => PASOS_ESCALA.map((paso, k) => {
+    const [con, t] = MEZCLAS_ESCALA[k];
+    return { paso, hex: con ? mezclar(base, con, t) : base };
+  });
+  const escalaGrises = (temperatura) => PASOS_ESCALA.map((paso, k) => ({ paso, hex: grisEn(LUCES_GRIS[k], temperatura) }));
+
+  /* ------------------------------------------------------------------------
+     6. Dibujo de la rueda
      ------------------------------------------------------------------------ */
 
   /**
    * Sector de anillo con esquinas suavizadas y hueco constante entre
-   * sectores. Se usa para los colores y para el velo de la armonía.
+   * sectores. Se usa para los colores y para los velos.
    */
   function rutaSector(i) {
-    const { exterior: re, interior: ri, hueco, esquina: c } = GEO;
+    const { exterior: re, interior: ri } = GEO;
+    const [hueco, c] = HUECOS[TOTAL];
     const a = i * PASO - PASO / 2;
     const b = i * PASO + PASO / 2;
     const desvio = (r) => (Math.asin(hueco / 2 / r) * 180) / Math.PI;   // hueco paralelo al radio
@@ -369,11 +448,13 @@
     ].join('');
   }
 
-  const segmentos = [];
+  let segmentos = [];
+  let svgAnillo = null;
 
+  /** Dibuja el anillo de la pestaña activa (una vez por pestaña o cambio de base). */
   function construirAnillo() {
     const svg = crearSVG('svg', { class: 'rueda__anillo', viewBox: '-120 -120 240 240', role: 'none', focusable: 'false' });
-    COLORES.forEach((color, i) => {
+    segmentos = anillo.map((color, i) => {
       const segmento = crearSVG('path', {
         class: 'segmento',
         d: rutaSector(i),
@@ -381,23 +462,34 @@
         id: `color-${i}`,
         role: 'option',
         'aria-selected': 'false',
-        'aria-label': `${color.nombre}, ${color.categoria}`,
+        'aria-label': est.activa === 'color' ? `${color.nombre}, ${color.categoria}` : `${color.nombre}, ${color.hex}`,
       });
       const titulo = crearSVG('title', {});
       titulo.textContent = color.nombre;
       segmento.append(titulo);
       svg.append(segmento);
-      segmentos.push(segmento);
+      return segmento;
     });
+    if (svgAnillo) svgAnillo.remove();
     rotor.prepend(svg);
+    svgAnillo = svg;
+  }
+
+  /** Marcador: anillo blanco hueco (deja ver el color) con un halo oscuro. */
+  function marcador(svg, paso, r) {
+    const [cx, cy] = polar(GEO.marcador, paso * PASO);
+    svg.append(
+      crearSVG('circle', { class: 'marcador marcador--halo', cx, cy, r }),
+      crearSVG('circle', { class: 'marcador marcador--anillo', cx, cy, r })
+    );
   }
 
   /**
-   * Capa de la armonía para el modo actual, dibujada con el color elegido en
-   * 0°. Es una figura fija: al cambiar de color solo se gira con transform.
+   * Capa de la armonía (pestaña Color), dibujada con el color elegido en 0°.
+   * Es una figura fija: al cambiar de color solo se gira con transform.
    */
-  function construirCapa() {
-    const pasos = ARMONIAS[estado.modo].pasos;
+  function construirCapaColor() {
+    const pasos = ARMONIAS[est.color.modo].pasos;
     const svg = crearSVG('svg', { viewBox: '-120 -120 240 240', focusable: 'false' });
 
     // Velo sobre los colores que no forman parte de la armonía
@@ -405,11 +497,9 @@
     for (let i = 0; i < TOTAL; i++) if (!pasos.includes(i)) velo.push(rutaSector(i));
     svg.append(crearSVG('path', { class: 'velo', d: velo.join('') }));
 
-    // Marcadores: anillos blancos huecos (dejan ver el color); el del color elegido, mayor
+    // Polígono que une los colores: cada lado se recorta en el borde de los marcadores
     const radioMarcador = (p) => (p === 0 ? 7.2 : 5.6);
     const vertices = [...pasos].sort((x, y) => x - y).map((p) => ({ punto: polar(GEO.marcador, p * PASO), r: radioMarcador(p) }));
-
-    // Polígono que une los colores: cada lado se recorta en el borde de los marcadores
     const lados = [];
     const cerrado = vertices.length > 2;
     for (let k = 0; k < (cerrado ? vertices.length : vertices.length - 1); k++) {
@@ -430,27 +520,33 @@
       crearSVG('path', { class: 'poligono poligono--halo', d }),
       crearSVG('path', { class: 'poligono poligono--linea', d })
     );
-
-    pasos.forEach((p) => {
-      const [cx, cy] = polar(GEO.marcador, p * PASO);
-      const r = radioMarcador(p);
-      svg.append(
-        crearSVG('circle', { class: 'marcador marcador--halo', cx, cy, r }),
-        crearSVG('circle', { class: 'marcador marcador--anillo', cx, cy, r })
-      );
-    });
-
+    pasos.forEach((p) => marcador(svg, p, radioMarcador(p)));
     capa.replaceChildren(svg);
   }
 
-  /** Gira la capa de armonía hasta el color "i" por el camino más corto. */
+  /**
+   * Capa de las ruedas de tonos y grises: un velo sobre lo que NO se lee
+   * sobre el elegido (contraste menor que AA). Lo que queda limpio sirve
+   * para texto encima de ese tono o gris.
+   */
+  function construirCapaEscala(i) {
+    const ref = anillo[i].lum;
+    const velo = [];
+    for (let k = 0; k < TOTAL; k++) if (k !== i && contrasteLum(anillo[k].lum, ref) < AA) velo.push(rutaSector(k));
+    const svg = crearSVG('svg', { viewBox: '-120 -120 240 240', focusable: 'false' });
+    if (velo.length) svg.append(crearSVG('path', { class: 'velo velo--escala', d: velo.join('') }));
+    marcador(svg, i, 7.2);
+    capa.replaceChildren(svg);
+  }
+
+  /** Gira la capa de armonía hasta el color "i" por el camino más corto (pestaña Color). */
   function girarCapa(i) {
-    estado.anguloCapa = cercano(estado.anguloCapa, i * PASO, ARMONIAS[estado.modo].periodo);
-    capa.style.transform = `rotate(${estado.anguloCapa}deg)`;
+    est.anguloCapa = cercano(est.anguloCapa, i * PASO, ARMONIAS[est.color.modo].periodo);
+    capa.style.transform = `rotate(${est.anguloCapa}deg)`;
   }
 
   /* ------------------------------------------------------------------------
-     6. Movimiento de la rueda
+     7. Movimiento de la rueda
      ------------------------------------------------------------------------ */
   function fijarAngulo(x) {
     mov.x = x;
@@ -548,76 +644,106 @@
       .catch(() => { /* interrumpida por otra animación o por la mano */ });
   }
 
-  /** Lleva el color "i" bajo el puntero por el camino más corto. */
-  function irAColor(i, velocidad) {
+  /** Lleva la posición "i" bajo el puntero por el camino más corto. */
+  function irA(i, velocidad) {
     const x = anguloActual();
     reproducir(trayectoriaMuelle(x, velocidad || 0, x + normalizar(-i * PASO - x)));
   }
 
   /* ------------------------------------------------------------------------
-     7. Vista (lo que señala el puntero) y selección
+     8. Vista (lo que señala el puntero) y selección
      ------------------------------------------------------------------------ */
 
-  /** Muestra un color en el centro, en la lectura y en la capa de armonía. */
+  /** Muestra la posición "i" en el centro, en la lectura y en la capa. */
   function mostrarVista(i, forzar) {
-    if (i === estado.vista && !forzar) return;
-    estado.vista = i;
-    const color = COLORES[i];
-    const propio = estado.personal && estado.personal.indice === i ? estado.personal : null;
-    centro.style.backgroundColor = propio ? propio.hex : color.hex;
-    if (propio) {
-      lecturaNombre.textContent = propio.hex;
-      lecturaHex.textContent = propio.neutro ? 'Sin matiz' : `≈ ${color.nombre}`;
-      lecturaTipo.textContent = 'Código propio';
-    } else {
-      lecturaNombre.textContent = color.nombre;
-      lecturaHex.textContent = color.hex;
-      lecturaTipo.textContent = capitalizar(color.categoria);
-    }
-    lecturaGrados.textContent = grados(i * PASO);
+    if (i === est.vista && !forzar) return;
+    est.vista = i;
     rueda.setAttribute('aria-activedescendant', `color-${i}`);
-    girarCapa(i);
+    const e = anillo[i];
+
+    if (est.activa === 'color') {
+      const propio = est.color.personal && est.color.personal.indice === i ? est.color.personal : null;
+      centro.style.backgroundColor = propio ? propio.hex : e.hex;
+      if (propio) {
+        lecturaNombre.textContent = propio.hex;
+        lecturaHex.textContent = propio.neutro ? 'Sin matiz' : `≈ ${e.nombre}`;
+        lecturaTipo.textContent = 'Código propio';
+      } else {
+        lecturaNombre.textContent = e.nombre;
+        lecturaHex.textContent = e.hex;
+        lecturaTipo.textContent = capitalizar(e.categoria);
+      }
+      lecturaGrados.textContent = grados(i * PASO);
+      girarCapa(i);
+      return;
+    }
+
+    centro.style.backgroundColor = e.hex;
+    lecturaNombre.textContent = e.nombre;
+    lecturaHex.textContent = e.hex;
+    if (est.activa === 'tonos') {
+      lecturaTipo.textContent = `Tono de ${nombreBase()}`;
+      lecturaGrados.textContent = `Luz ${Math.round(hslDe(e.hex)[2])} %`;
+    } else {
+      lecturaTipo.textContent = TEMPERATURAS[est.grises.temperatura].nombre;
+      lecturaGrados.textContent = `Sobre blanco ${ratio(contrasteLum(e.lum, 1))}`;
+    }
+    construirCapaEscala(i);
   }
 
   /**
-   * Confirma un color de la rueda: paleta, enlace y anuncio. Con
+   * Confirma una posición de la rueda activa. En la pestaña Color, con
    * { personal: true } conserva el código propio (la rueda va al más parecido).
    */
   function seleccionar(i, opciones) {
     const { anunciar = true, personal = false, desdeCampo = false } = opciones || {};
-    if (!personal) estado.personal = null;
     if (!desdeCampo) limpiarCampo();
-    const cambia = i !== estado.seleccionado;
-    segmentos[estado.seleccionado].setAttribute('aria-selected', 'false');
+    if (segmentos[est.marcado]) segmentos[est.marcado].setAttribute('aria-selected', 'false');
     segmentos[i].setAttribute('aria-selected', 'true');
-    estado.seleccionado = i;
-    mostrarVista(i, true);
-    pintarPanel(false);
-    guardarEnEnlace();
-    if (cambia && estado.tactil && navigator.vibrate) {
+    est.marcado = i;
+    const cambia = i !== est[est.activa].indice;
+
+    if (est.activa === 'color') {
+      if (!personal) est.color.personal = null;
+      est.color.indice = i;
+      mostrarVista(i, true);
+      pintarPanelColor(false);
+      guardarEnEnlace();
+    } else {
+      est[est.activa].indice = i;
+      mostrarVista(i, true);
+      pintarPanelEscala();
+    }
+
+    if (cambia && est.tactil && navigator.vibrate) {
       try { navigator.vibrate(8); } catch (_) { /* sin vibración */ }
     }
-    if (anunciar) anunciarPaleta();
+    if (anunciar) anunciarSeleccion();
   }
 
-  function anunciarPaleta() {
-    const entradas = entradasDePaleta();
-    const quien = estado.personal ? `Código ${estado.personal.hex}` : COLORES[estado.seleccionado].nombre;
-    anunciador.textContent = `${quien}. ${tituloDeArmonia()}: ${enumerar(entradas.map((e) => e.nombre.replace('≈ ', 'parecido a ').toLowerCase()))}.`;
+  function anunciarSeleccion() {
+    if (est.activa === 'color') {
+      const entradas = entradasDePaleta();
+      const quien = est.color.personal ? `Código ${est.color.personal.hex}` : COLORES[est.color.indice].nombre;
+      anunciador.textContent = `${quien}. ${tituloDeArmonia()}: ${enumerar(entradas.map((e) => e.nombre.replace('≈ ', 'parecido a ').toLowerCase()))}.`;
+    } else {
+      const e = anillo[est[est.activa].indice];
+      anunciador.textContent = `${e.nombre}, ${e.hex}.`;
+    }
   }
 
   function tituloDeArmonia() {
-    if (estado.modo === 'triada' && !estado.personal) return NOMBRE_TRIADA[COLORES[estado.seleccionado].categoria];
-    return ARMONIAS[estado.modo].nombre;
+    if (est.color.modo === 'triada' && !est.color.personal) return NOMBRE_TRIADA[COLORES[est.color.indice].categoria];
+    return ARMONIAS[est.color.modo].nombre;
   }
 
   /** Colores de la paleta actual: de la rueda, o derivados del código propio. */
   function entradasDePaleta() {
-    const pasos = ARMONIAS[estado.modo].pasos;
-    const p = estado.personal;
+    const pasos = ARMONIAS[est.color.modo].pasos;
+    const p = est.color.personal;
     return pasos.map((paso, k) => {
       if (!p) {
-        const c = COLORES[mod(estado.seleccionado + paso, TOTAL)];
+        const c = COLORES[mod(est.color.indice + paso, NC)];
         return { hex: c.hex, nombre: c.nombre, variable: c.slug, paso };
       }
       const hex = k === 0 ? p.hex : derivar(p, paso);
@@ -626,24 +752,24 @@
     });
   }
 
-  /** Toque en un color: se elige y la rueda lo lleva bajo el puntero. */
-  function elegirColor(i, velocidad) {
-    irAColor(i, velocidad);
+  /** Toque o tecla: se elige la posición y la rueda la lleva bajo el puntero. */
+  function elegir(i, velocidad) {
+    irA(i, velocidad);
     seleccionar(i);
   }
 
   /* ------------------------------------------------------------------------
-     8. Panel: título, muestras y tonos
+     9. Paneles
      ------------------------------------------------------------------------ */
   function etiquetaPosicion(paso) {
     if (paso === 0) return 'Tu color';
-    const g = normalizar(paso * PASO);
+    const g = normalizar(paso * (360 / NC));
     return `${g > 0 ? '+' : '−'}${grados(Math.abs(g))}`;
   }
 
-  /** Crea las muestras del modo actual. */
+  /* ---- Pestaña Color: muestras de la armonía ---- */
   function crearMuestras() {
-    const pasos = ARMONIAS[estado.modo].pasos;
+    const pasos = ARMONIAS[est.color.modo].pasos;
     listaMuestras.style.setProperty('--n', pasos.length);
     listaMuestras.replaceChildren(...pasos.map((paso, k) => {
       const li = document.createElement('li');
@@ -660,19 +786,18 @@
     }));
   }
 
-  /** Rellena las muestras con los colores de la armonía actual. */
-  function pintarPanel(recrear) {
+  function pintarPanelColor(recrear) {
     const entradas = entradasDePaleta();
     if (recrear || listaMuestras.children.length !== entradas.length) crearMuestras();
 
     tituloArmonia.textContent = tituloDeArmonia();
-    textoArmonia.textContent = ARMONIAS[estado.modo].texto;
+    textoArmonia.textContent = ARMONIAS[est.color.modo].texto;
 
     const nombresTono = ['muy claro', 'claro', 'base', 'oscuro', 'muy oscuro'];
     entradas.forEach((entrada, k) => {
       const li = listaMuestras.children[k];
       const sobre = textoSobre(entrada.hex);
-      const valor = formatear(entrada.hex, estado.formato);
+      const valor = formatear(entrada.hex, est.formato);
       const bloque = li.querySelector('.muestra__bloque');
 
       bloque.style.setProperty('--c', entrada.hex);
@@ -683,14 +808,14 @@
       li.querySelector('.muestra__nombre').textContent = entrada.nombre;
       li.querySelector('.muestra__valor').textContent = valor;
       const contrasteEl = li.querySelector('.muestra__contraste');
-      contrasteEl.textContent = `Aa ${sobre.ratio.toFixed(1).replace('.', ',')}:1`;
+      contrasteEl.textContent = `Aa ${ratio(sobre.ratio)}`;
       contrasteEl.title = `Contraste del texto ${sobre.color === '#FFFFFF' ? 'blanco' : 'oscuro'} sobre este color`;
 
       const grupo = li.querySelector('.muestra__tonos');
       grupo.setAttribute('aria-label', `Tonos de ${entrada.nombre.replace('≈ ', '')}`);
       tonosDe(entrada.hex).forEach((hex, t) => {
         const boton = grupo.children[t];
-        const valorTono = formatear(hex, estado.formato);
+        const valorTono = formatear(hex, est.formato);
         boton.style.setProperty('--t', hex);
         boton.dataset.valor = valorTono;
         boton.dataset.hex = hex;
@@ -700,8 +825,68 @@
     });
   }
 
+  /* ---- Pestañas Tonos y Grises: escala 50–950 ---- */
+  function escalaActual() {
+    return est.activa === 'tonos' ? escalaTonal(baseHex()) : escalaGrises(est.grises.temperatura);
+  }
+
+  function prefijoCss() {
+    if (est.activa === 'tonos') return slugBase();
+    return est.grises.temperatura === 'neutro' ? 'gris' : `gris-${aSlug(TEMPERATURAS[est.grises.temperatura].nombre)}`;
+  }
+
+  function pintarPanelEscala() {
+    const pestana = est.activa;
+    const lista = $(`escala-${pestana}`);
+    const escala = escalaActual();
+    if (pestana === 'tonos') {
+      $('titulo-tonos').textContent = `Tonos de ${nombreBase()}`;
+    } else {
+      const t = est.grises.temperatura;
+      $('titulo-grises').textContent = t === 'neutro' ? 'Escala de grises' : `Grises ${TEMPERATURAS[t].plural}`;
+    }
+
+    if (lista.children.length !== escala.length) {
+      lista.replaceChildren(...escala.map(() => {
+        const li = document.createElement('li');
+        li.innerHTML =
+          '<button class="escalon" type="button">' +
+            '<span class="escalon__muestra">Aa</span>' +
+            '<span class="escalon__paso"></span>' +
+            '<span class="escalon__valor"></span>' +
+            '<span class="escalon__contraste"></span>' +
+          '</button>';
+        return li;
+      }));
+    }
+
+    // Se marca el escalón más parecido (en luminancia) al tono o gris elegido
+    const lumElegida = anillo[est[pestana].indice].lum;
+    let masCercano = 0;
+    escala.forEach((e, k) => {
+      e.lum = luminancia(e.hex);
+      if (Math.abs(e.lum - lumElegida) < Math.abs(escala[masCercano].lum - lumElegida)) masCercano = k;
+    });
+
+    escala.forEach((e, k) => {
+      const boton = lista.children[k].firstElementChild;
+      const sobre = textoSobre(e.hex);
+      const valor = formatear(e.hex, est.formato);
+      const muestra = boton.querySelector('.escalon__muestra');
+      muestra.style.setProperty('--c', e.hex);
+      muestra.style.setProperty('--sobre', sobre.color);
+      boton.querySelector('.escalon__paso').textContent = e.paso;
+      boton.querySelector('.escalon__valor').textContent = valor;
+      boton.querySelector('.escalon__contraste').textContent = `Aa ${ratio(sobre.ratio)}`;
+      boton.dataset.valor = valor;
+      boton.dataset.hex = e.hex;
+      boton.classList.toggle('actual', k === masCercano);
+      boton.setAttribute('aria-label', `Copiar ${e.paso}: ${valor}. Texto ${sobre.color === '#FFFFFF' ? 'blanco' : 'oscuro'} con contraste ${ratio(sobre.ratio)}`);
+    });
+  }
+
   /* ------------------------------------------------------------------------
-     9. Copiar, compartir y avisos
+     10. Copiar, compartir y avisos
      ------------------------------------------------------------------------ */
   async function copiarTexto(texto) {
     try {
@@ -747,9 +932,9 @@
     mostrarAviso(ok ? mensaje || `${texto} copiado` : `No se pudo copiar: ${texto}`, colores);
   }
 
-  // Un solo escuchador para todas las muestras y tonos
-  listaMuestras.addEventListener('click', (e) => {
-    const boton = e.target.closest('.muestra__bloque, .tono');
+  // Un solo escuchador para muestras, tonos y escalones
+  document.querySelector('.principal').addEventListener('click', (e) => {
+    const boton = e.target.closest('.muestra__bloque, .tono, .escalon');
     if (!boton) return;
     copiarYAvisar(boton.dataset.valor, [boton.dataset.hex], boton);
   });
@@ -758,20 +943,32 @@
 
   $('copiar-paleta').addEventListener('click', (e) => {
     const hexes = hexesDePaleta();
-    copiarYAvisar(hexes.map((h) => formatear(h, estado.formato)).join(', '), hexes, e.currentTarget, 'Paleta copiada');
+    copiarYAvisar(hexes.map((h) => formatear(h, est.formato)).join(', '), hexes, e.currentTarget, 'Paleta copiada');
   });
 
   $('copiar-css').addEventListener('click', (e) => {
-    const entradas = entradasDePaleta();
-    const lineas = entradas.map((en) => `  --${en.variable}: ${formatear(en.hex, estado.formato)};`);
+    const lineas = entradasDePaleta().map((en) => `  --${en.variable}: ${formatear(en.hex, est.formato)};`);
     copiarYAvisar(`:root {\n${lineas.join('\n')}\n}`, hexesDePaleta(), e.currentTarget, 'Variables CSS copiadas');
+  });
+
+  ['tonos', 'grises'].forEach((pestana) => {
+    $(`copiar-escala-${pestana}`).addEventListener('click', (e) => {
+      const escala = escalaActual();
+      copiarYAvisar(escala.map((x) => formatear(x.hex, est.formato)).join(', '), escala.map((x) => x.hex), e.currentTarget, 'Escala copiada');
+    });
+    $(`copiar-css-${pestana}`).addEventListener('click', (e) => {
+      const escala = escalaActual();
+      const prefijo = prefijoCss();
+      const lineas = escala.map((x) => `  --${prefijo}-${x.paso}: ${formatear(x.hex, est.formato)};`);
+      copiarYAvisar(`:root {\n${lineas.join('\n')}\n}`, escala.map((x) => x.hex), e.currentTarget, 'Variables CSS copiadas');
+    });
   });
 
   /** El enlace guarda la armonía y el color: #triada-amarillo o #triada-3a7bd5 */
   function guardarEnEnlace() {
-    const color = estado.personal ? estado.personal.hex.slice(1).toLowerCase() : COLORES[estado.seleccionado].slug;
+    const color = est.color.personal ? est.color.personal.hex.slice(1).toLowerCase() : COLORES[est.color.indice].slug;
     try {
-      history.replaceState(null, '', `#${estado.modo}-${color}`);
+      history.replaceState(null, '', `#${est.color.modo}-${color}`);
     } catch (_) { /* algunos marcos no lo permiten */ }
   }
 
@@ -806,7 +1003,7 @@
   });
 
   /* ------------------------------------------------------------------------
-     10. Buscar por código: HEX, RGB, HSL, nombres CSS o de la rueda
+     11. Buscar por código: HEX, RGB, HSL, nombres CSS o de la rueda
      ------------------------------------------------------------------------ */
   let lienzo = null;
 
@@ -848,13 +1045,27 @@
     return null;
   }
 
-  /** Aplica un código propio: la rueda va al color más parecido y la paleta se deriva del código. */
-  function aplicarPersonal(hex) {
-    estado.personal = crearPersonal(hex);
-    irAColor(estado.personal.indice, velocidadActual());
-    seleccionar(estado.personal.indice, { personal: true, desdeCampo: true });
-    if (estado.personal.neutro) {
-      mostrarAviso('Grises, blanco y negro no tienen matiz: combinan con todo y su armonía es el mismo color.', [hex]);
+  /** Fija el color de la pestaña Color (de la rueda o código propio) sin mostrarla. */
+  function fijarColor(resultado) {
+    const exacto = resultado.indice !== undefined ? resultado.indice : COLORES.findIndex((c) => c.hex === resultado.hex);
+    if (exacto >= 0) {
+      est.color.personal = null;
+      est.color.indice = exacto;
+    } else {
+      est.color.personal = crearPersonal(resultado.hex);
+      est.color.indice = est.color.personal.indice;
+    }
+    est.color.angulo = -est.color.indice * (360 / NC);
+    return exacto;
+  }
+
+  /** Aplica un código en la pestaña Color: la rueda va al color (o al más parecido). */
+  function aplicarEnColor(resultado) {
+    const exacto = fijarColor(resultado);
+    irA(est.color.indice, velocidadActual());
+    seleccionar(est.color.indice, { personal: exacto < 0, desdeCampo: true });
+    if (est.color.personal && est.color.personal.neutro) {
+      mostrarAviso('Grises, blanco y negro no tienen matiz: combinan con todo y su armonía es el mismo color.', [resultado.hex]);
     }
   }
 
@@ -883,13 +1094,25 @@
         : 'Escribe un código: #3A7BD5, rgb(58, 123, 213) o un nombre.');
       return;
     }
-    estado.tactil = false;
-    const exacto = resultado.indice !== undefined ? resultado.indice : COLORES.findIndex((c) => c.hex === resultado.hex);
-    if (exacto >= 0) {
-      irAColor(exacto, velocidadActual());
-      seleccionar(exacto, { desdeCampo: true });
+    est.tactil = false;
+
+    if (est.activa === 'color') {
+      aplicarEnColor(resultado);
+    } else if (est.activa === 'tonos') {
+      // El código pasa a ser la base de los tonos (y el color de la pestaña Color)
+      fijarColor(resultado);
+      guardarEnEnlace();
+      prepararTonos(true);
+      irA(BASE_TONAL, velocidadActual());
+      seleccionar(BASE_TONAL, { desdeCampo: true });
     } else {
-      aplicarPersonal(resultado.hex);
+      // Su gris equivalente: el de luminancia más parecida
+      const lum = luminancia(resultado.hex);
+      let i = 0;
+      anillo.forEach((g, k) => { if (Math.abs(g.lum - lum) < Math.abs(anillo[i].lum - lum)) i = k; });
+      irA(i, velocidadActual());
+      seleccionar(i, { desdeCampo: true });
+      mostrarAviso(`Su gris equivalente es ${anillo[i].nombre.toLowerCase()}: ${anillo[i].hex}`, [resultado.hex, anillo[i].hex]);
     }
     if (window.matchMedia('(pointer: coarse)').matches) campo.blur();   // oculta el teclado del móvil
   });
@@ -904,7 +1127,7 @@
   });
 
   /* ------------------------------------------------------------------------
-     11. Arrastre con ratón o dedo (Pointer Events)
+     12. Arrastre con ratón o dedo (Pointer Events)
      ------------------------------------------------------------------------ */
   let arrastre = null;
   let cuadroPendiente = 0;
@@ -929,13 +1152,12 @@
     const c = centroDeRueda();
     // En táctil, el disco central queda libre para desplazar la página
     if (e.pointerType !== 'mouse' && enCentro(e.clientX, e.clientY, c)) return;
-    estado.tactil = e.pointerType !== 'mouse';
+    est.tactil = e.pointerType !== 'mouse';
     detener();
     arrastre = {
       id: e.pointerId,
       x: e.clientX,
       y: e.clientY,
-      t: e.timeStamp,
       c,
       angulo: anguloPuntero(e.clientX, e.clientY, c),
       movido: false,
@@ -976,26 +1198,24 @@
     rueda.classList.remove('arrastrando');
     capa.classList.remove('inmediata');
 
-    // Toque sin arrastrar: el color se elige por el ángulo del toque (con 96 colores
-    // los sectores son finos; así también vale tocar entre dos)
+    // Toque sin arrastrar: se elige por el ángulo del toque (los sectores son finos;
+    // así también vale tocar entre dos)
     if (!datos.movido) {
       const distancia = Math.hypot(datos.x - datos.c.x, datos.y - datos.c.y);
       const escala = datos.c.radio / 120;
       const enAnillo = distancia > GEO.interior * 0.9 * escala && distancia < (GEO.exterior + 8) * escala;
+      const actual = est[est.activa].indice;
       if (enAnillo && !cancelado) {
         const angulo = anguloPuntero(datos.x, datos.y, datos.c);
-        elegirColor(mod(Math.round((angulo - mov.x) / PASO), TOTAL));
-      } else if (estado.personal) {
-        irAColor(estado.personal.indice);   // vuelve al color del código propio
-        mostrarVista(estado.personal.indice, true);
+        elegir(mod(Math.round((angulo - mov.x) / PASO), TOTAL));
       } else {
-        irAColor(estado.seleccionado);
-        mostrarVista(estado.seleccionado);
+        irA(actual);   // vuelve a lo elegido si se tocó el centro o fuera del anillo
+        mostrarVista(actual, true);
       }
       return;
     }
 
-    // Arrastre: velocidad de los últimos 80 ms → vuelo libre proyectado → muelle al color
+    // Arrastre: velocidad de los últimos 80 ms → vuelo libre proyectado → muelle a la posición
     const ahora = e.timeStamp;
     const recientes = datos.muestras.filter((m) => ahora - m.t <= 80);
     let v = 0;
@@ -1022,7 +1242,7 @@
   }, { passive: false });
 
   /* ------------------------------------------------------------------------
-     12. Teclado: flechas (3,75°), Mayús + flecha o RePág/AvPág (30°), Inicio/Fin
+     13. Teclado: flechas (un paso), Mayús + flecha o RePág/AvPág (8 pasos), Inicio/Fin
      ------------------------------------------------------------------------ */
   rueda.addEventListener('keydown', (e) => {
     let pasos = { ArrowRight: 1, ArrowDown: 1, ArrowLeft: -1, ArrowUp: -1, PageDown: SALTO, PageUp: -SALTO }[e.key];
@@ -1030,36 +1250,150 @@
     let i = null;
     if (e.key === 'Home') i = 0;
     else if (e.key === 'End') i = TOTAL - 1;
-    else if (pasos) i = mod(estado.seleccionado + pasos, TOTAL);
+    else if (pasos) i = mod(est[est.activa].indice + pasos, TOTAL);
     if (i === null) return;
     e.preventDefault();
-    estado.tactil = false;
+    est.tactil = false;
     // Conserva la velocidad del giro en curso para encadenar pulsaciones rápidas sin saltos
-    elegirColor(i, velocidadActual());
+    elegir(i, velocidadActual());
   });
 
   /* ------------------------------------------------------------------------
-     13. Controles: armonía, formato, azar y tema
+     14. Pestañas
+     ------------------------------------------------------------------------ */
+  const ETIQUETAS_RUEDA = {
+    color: () => 'Rueda cromática de 96 colores',
+    tonos: () => `Rueda de 48 tonos de ${nombreBase()}`,
+    grises: () => `Rueda de 48 grises ${TEMPERATURAS[est.grises.temperatura].plural}`,
+  };
+
+  /** Prepara la rueda de tonos; si cambió el color base, vuelve a su posición. */
+  function prepararTonos(forzar) {
+    const base = baseHex();
+    if (forzar || est.tonos.base !== base) {
+      est.tonos.base = base;
+      est.tonos.indice = BASE_TONAL;
+      est.tonos.angulo = -BASE_TONAL * (360 / NE);
+      if (est.activa === 'tonos') {
+        anillo = anilloTonal(base);
+        construirAnillo();
+        rueda.setAttribute('aria-label', ETIQUETAS_RUEDA.tonos());
+      }
+    }
+  }
+
+  /** Coloca la raya bajo la pestaña activa. */
+  function moverIndicador() {
+    const activa = pestanas.find((p) => p.dataset.pestana === est.activa);
+    if (!activa || !indicador) return;
+    indicador.style.setProperty('--x', `${activa.offsetLeft}px`);
+    indicador.style.setProperty('--ancho', `${activa.offsetWidth}px`);
+  }
+
+  function cambiarPestana(nombre, enfocar) {
+    if (nombre === est.activa) return;
+    detener();
+    est[est.activa].angulo = mov.x;
+    est.activa = nombre;
+
+    pestanas.forEach((p) => {
+      const activa = p.dataset.pestana === nombre;
+      p.setAttribute('aria-selected', String(activa));
+      p.tabIndex = activa ? 0 : -1;
+      $(p.getAttribute('aria-controls')).hidden = !activa;
+      if (activa && enfocar) p.focus();
+    });
+    moverIndicador();
+
+    // Datos de la rueda
+    TOTAL = nombre === 'color' ? NC : NE;
+    PASO = 360 / TOTAL;
+    if (nombre === 'color') {
+      anillo = COLORES;
+    } else if (nombre === 'tonos') {
+      if (est.tonos.base !== baseHex()) {
+        est.tonos.base = baseHex();
+        est.tonos.indice = BASE_TONAL;   // con un color base nuevo, se empieza por él
+        est.tonos.angulo = -BASE_TONAL * PASO;
+      }
+      anillo = anilloTonal(est.tonos.base);
+    } else {
+      anillo = anilloGrises(est.grises.temperatura);
+    }
+    rueda.classList.toggle('rueda--escala', nombre !== 'color');
+    rueda.setAttribute('aria-label', ETIQUETAS_RUEDA[nombre]());
+    construirAnillo();
+
+    capa.classList.add('inmediata');
+    if (nombre === 'color') {
+      construirCapaColor();
+      est.anguloCapa = est.color.indice * PASO;
+      capa.style.transform = `rotate(${est.anguloCapa}deg)`;
+    } else {
+      capa.style.transform = 'none';
+    }
+    requestAnimationFrame(() => capa.classList.remove('inmediata'));
+
+    est.vista = -1;
+    est.marcado = 0;
+    seleccionar(est[nombre].indice, { anunciar: false, personal: Boolean(est.color.personal), desdeCampo: true });
+    if (nombre === 'color') pintarPanelColor(true);
+
+    // La rueda entra con un giro corto hasta su posición
+    const destino = cercano(0, est[nombre].angulo, 360);
+    fijarAngulo(destino - 40);
+    reproducir(trayectoriaCurva(destino - 40, destino, 560, salidaCubica));
+  }
+
+  pestanas.forEach((p) => {
+    p.addEventListener('click', () => cambiarPestana(p.dataset.pestana));
+    // Flechas entre pestañas (patrón ARIA de pestañas)
+    p.addEventListener('keydown', (e) => {
+      const k = pestanas.indexOf(p);
+      const destino = { ArrowRight: k + 1, ArrowLeft: k - 1, Home: 0, End: pestanas.length - 1 }[e.key];
+      if (destino === undefined) return;
+      e.preventDefault();
+      cambiarPestana(pestanas[mod(destino, pestanas.length)].dataset.pestana, true);
+    });
+  });
+  window.addEventListener('resize', moverIndicador);
+  if (document.fonts && document.fonts.ready) document.fonts.ready.then(moverIndicador);
+
+  /* ------------------------------------------------------------------------
+     15. Controles: armonía, temperatura, formato, azar y tema
      ------------------------------------------------------------------------ */
   /** Cambia la armonía: nueva capa en la rueda y nuevas muestras. */
   function cambiarModo(modo) {
-    estado.modo = modo;
+    est.color.modo = modo;
     const radio = document.querySelector(`input[name="armonia"][value="${modo}"]`);
     if (radio) radio.checked = true;
-    construirCapa();
-    estado.anguloCapa = cercano(0, estado.vista * PASO, 360);
+    if (est.activa !== 'color') return;
+    construirCapaColor();
+    est.anguloCapa = cercano(0, est.vista * PASO, 360);
     capa.classList.add('inmediata');
-    capa.style.transform = `rotate(${estado.anguloCapa}deg)`;
+    capa.style.transform = `rotate(${est.anguloCapa}deg)`;
     if (!sinMovimiento() && capa.animate) capa.animate([{ opacity: 0 }, { opacity: 1 }], { duration: 280, easing: 'ease-out' });
     requestAnimationFrame(() => capa.classList.remove('inmediata'));
-    pintarPanel(true);
+    pintarPanelColor(true);
   }
 
   document.querySelectorAll('input[name="armonia"]').forEach((radio) => {
     radio.addEventListener('change', () => {
       cambiarModo(radio.value);
       guardarEnEnlace();
-      anunciarPaleta();
+      anunciarSeleccion();
+    });
+  });
+
+  document.querySelectorAll('input[name="temperatura"]').forEach((radio) => {
+    radio.addEventListener('change', () => {
+      est.grises.temperatura = radio.value;
+      if (est.activa !== 'grises') return;
+      anillo = anilloGrises(radio.value);
+      construirAnillo();
+      rueda.setAttribute('aria-label', ETIQUETAS_RUEDA.grises());
+      est.marcado = 0;
+      seleccionar(est.grises.indice, { anunciar: false, desdeCampo: true });
     });
   });
 
@@ -1067,25 +1401,26 @@
   window.addEventListener('hashchange', () => {
     const enlace = leerEnlace();
     if (!enlace) return;
-    if (enlace.modo !== estado.modo) cambiarModo(enlace.modo);
-    if (enlace.hex) {
-      if (!estado.personal || estado.personal.hex !== enlace.hex) aplicarPersonal(enlace.hex);
-    } else if (enlace.indice !== estado.seleccionado || estado.personal) {
-      elegirColor(enlace.indice);
-    }
+    cambiarPestana('color');
+    if (enlace.modo !== est.color.modo) cambiarModo(enlace.modo);
+    const actual = est.color.personal ? est.color.personal.hex : COLORES[est.color.indice].hex;
+    const nuevo = enlace.hex || COLORES[enlace.indice].hex;
+    if (nuevo !== actual) aplicarEnColor(enlace.hex ? { hex: enlace.hex } : { hex: nuevo, indice: enlace.indice });
   });
 
   document.querySelectorAll('input[name="formato"]').forEach((radio) => {
     radio.addEventListener('change', () => {
-      estado.formato = radio.value;
-      pintarPanel(false);
+      est.formato = radio.value;
+      if (est.activa === 'color') pintarPanelColor(false);
+      else pintarPanelEscala();
     });
   });
 
-  // Color al azar: una vuelta completa larga que frena hasta el nuevo color
+  // Al azar: una vuelta completa larga que frena en una posición nueva
   $('azar').addEventListener('click', () => {
-    let i = estado.seleccionado;
-    while (i === estado.seleccionado) i = Math.floor(Math.random() * TOTAL);
+    const actual = est[est.activa].indice;
+    let i = actual;
+    while (i === actual) i = Math.floor(Math.random() * TOTAL);
     const x = anguloActual();
     const recorrido = mod(-i * PASO - x, 360) + 360;   // siempre en sentido horario
     reproducir(trayectoriaCurva(x, x + recorrido, 1500, salidaCuarta));
@@ -1106,39 +1441,45 @@
   if (preferenciaOscura.addEventListener) preferenciaOscura.addEventListener('change', pintarBotonTema);
 
   /* ------------------------------------------------------------------------
-     14. Inicio
+     16. Inicio (pestaña Color)
      ------------------------------------------------------------------------ */
   function iniciar() {
     const enlace = leerEnlace();
     if (enlace) {
-      estado.modo = enlace.modo;
+      est.color.modo = enlace.modo;
       const radio = document.querySelector(`input[name="armonia"][value="${enlace.modo}"]`);
       if (radio) radio.checked = true;
     } else {
-      // El navegador puede recordar el radio marcado al recargar: se respeta
+      // El navegador puede recordar los radios marcados al recargar: se respetan
       const marcado = document.querySelector('input[name="armonia"]:checked');
-      if (marcado) estado.modo = marcado.value;
+      if (marcado) est.color.modo = marcado.value;
     }
+    const temperatura = document.querySelector('input[name="temperatura"]:checked');
+    if (temperatura) est.grises.temperatura = temperatura.value;
+    const formato = document.querySelector('input[name="formato"]:checked');
+    if (formato) est.formato = formato.value;
 
     construirAnillo();
-    construirCapa();
+    construirCapaColor();
     pintarBotonTema();
+    moverIndicador();
 
     // Color inicial: el del enlace (de la rueda o un código propio) o el amarillo
     if (enlace && enlace.hex) {
-      estado.personal = crearPersonal(enlace.hex);
-      estado.seleccionado = estado.personal.indice;
+      est.color.personal = crearPersonal(enlace.hex);
+      est.color.indice = est.color.personal.indice;
       campo.value = enlace.hex;
       pintarPrevia({ hex: enlace.hex });
     } else if (enlace) {
-      estado.seleccionado = enlace.indice;
+      est.color.indice = enlace.indice;
     }
 
-    pintarPanel(true);
-    const objetivo = -estado.seleccionado * PASO;
-    estado.anguloCapa = estado.seleccionado * PASO;
-    capa.style.transform = `rotate(${estado.anguloCapa}deg)`;
-    seleccionar(estado.seleccionado, { anunciar: false, personal: Boolean(estado.personal), desdeCampo: true });
+    pintarPanelColor(true);
+    const objetivo = -est.color.indice * PASO;
+    est.anguloCapa = est.color.indice * PASO;
+    capa.style.transform = `rotate(${est.anguloCapa}deg)`;
+    est.marcado = est.color.indice;
+    seleccionar(est.color.indice, { anunciar: false, personal: Boolean(est.color.personal), desdeCampo: true });
 
     // Entrada: la rueda llega girando un tercio de vuelta y se detiene en su color
     fijarAngulo(objetivo - 120);

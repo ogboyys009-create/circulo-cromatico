@@ -10,6 +10,16 @@ doble clic en el navegador y se publica tal cual con GitHub Pages.
 
 ## Funciones
 
+Tres pestañas, cada una con su rueda (se gira igual en las tres):
+
+- **Color**: el círculo RYB de 96 colores con sus armonías.
+- **Tonos**: 48 tintes (con blanco) y sombras (con negro) del color elegido en la pestaña Color o
+  en el buscador, y su escala 50–950 lista para CSS (el 500 es el color base).
+- **Grises**: 48 grises del blanco al negro, neutros, cálidos o fríos, con su escala 50–950. Si
+  buscas un color en esta pestaña, te da su gris equivalente (misma luminancia).
+- En Tonos y Grises, la rueda deja sin velo lo que se lee sobre lo elegido con contraste AA
+  (4,5:1): sirve para elegir el color del texto.
+
 - **96 colores RYB** en su posición, cada 3,75°: 3 primarios, 3 secundarios, 6 terciarios y
   84 intermedios con nombre propio (Canario, Butano, Cadmio, Fucsia, Azul Klein, Lapislázuli,
   Pavo real, Viridián, Pistacho, Plátano…).
@@ -62,6 +72,7 @@ Probado con Chrome (CPU ralentizada ×4: 60 fps constantes) y con WebKit, el mot
 | `→` / `↓`          | Siguiente color, 3,75° (la rueda gira)   |
 | `Mayús` + flecha, `RePág` / `AvPág` | Salta 30°     |
 | `/`                | Va al buscador de códigos                |
+| `←` / `→` en las pestañas | Cambia de rueda                  |
 | `←` / `↑`          | Color anterior                           |
 | `Inicio` / `Fin`   | Primer / último color                    |
 | `Enter` en un color de la paleta | Copia su código            |

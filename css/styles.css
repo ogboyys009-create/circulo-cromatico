@@ -19,6 +19,8 @@
   --tinta-2: #57565F;
   --linea: #D6D4CE;
   --velo: rgba(237, 236, 232, .62);   /* atenúa los colores fuera de la armonía */
+  --velo-fuerte: rgba(237, 236, 232, .86);  /* tonos y grises que no se leen sobre el elegido */
+  --borde-segmento: rgba(25, 25, 27, .1);
   --sombra: rgba(25, 25, 27, .16);
 
   --display: "Bricolage Grotesque", "Arial Black", system-ui, sans-serif;
@@ -37,6 +39,8 @@
     --tinta-2: #A9A8A2;
     --linea: #313136;
     --velo: rgba(22, 22, 24, .5);
+    --velo-fuerte: rgba(22, 22, 24, .84);
+    --borde-segmento: rgba(255, 255, 255, .1);
     --sombra: rgba(0, 0, 0, .5);
     color-scheme: dark;
   }
@@ -49,6 +53,8 @@
   --tinta-2: #A9A8A2;
   --linea: #313136;
   --velo: rgba(22, 22, 24, .5);
+  --velo-fuerte: rgba(22, 22, 24, .84);
+  --borde-segmento: rgba(255, 255, 255, .1);
   --sombra: rgba(0, 0, 0, .5);
   color-scheme: dark;
 }
@@ -126,7 +132,7 @@ a {
   display: grid;
   grid-template-columns: minmax(0, 1fr);
   gap: 2.5rem;
-  margin-top: 1.5rem;
+  margin-top: 1.25rem;
 }
 
 @media (min-width: 900px) {
@@ -880,6 +886,157 @@ a {
 
 .aviso__muestra + .aviso__muestra {
   margin-left: -.3rem;
+}
+
+/* --------------------------------------------------------------------------
+   Pestañas (Color, Tonos, Grises) y formato del código
+   -------------------------------------------------------------------------- */
+.pestanas {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: .75rem 1rem;
+  margin-top: 1.25rem;
+  border-bottom: 1px solid var(--linea);
+}
+
+.pestanas__lista {
+  position: relative;
+  display: flex;
+  gap: .25rem;
+}
+
+.pestana {
+  padding: .7rem .9rem .8rem;
+  font-family: var(--display);
+  font-weight: 600;
+  font-size: 1.0625rem;
+  color: var(--tinta-2);
+  background: none;
+  border: 0;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+  transition: color 200ms var(--curva);
+}
+
+.pestana[aria-selected="true"] {
+  color: var(--tinta);
+}
+
+@media (hover: hover) {
+  .pestana:hover {
+    color: var(--tinta);
+  }
+}
+
+.pestana:focus-visible {
+  outline-offset: -2px;
+  border-radius: 8px;
+}
+
+/* Raya bajo la pestaña activa: se desliza con transform (JS fija --x y --ancho) */
+.pestanas__indicador {
+  position: absolute;
+  left: 0;
+  bottom: -1px;
+  width: var(--ancho, 0);
+  height: 2px;
+  border-radius: 2px;
+  background: var(--tinta);
+  transform: translateX(var(--x, 0));
+  transition: transform 320ms var(--curva), width 320ms var(--curva);
+}
+
+.pestanas .formato {
+  margin-bottom: .5rem;
+}
+
+/* --------------------------------------------------------------------------
+   Ruedas de tonos y grises
+   -------------------------------------------------------------------------- */
+/* Borde finísimo: deja ver los segmentos casi blancos o casi negros sobre el fondo */
+.rueda--escala .segmento {
+  stroke: var(--borde-segmento);
+  stroke-width: .35;
+}
+
+.velo--escala {
+  fill: var(--velo-fuerte);
+}
+
+.temperaturas {
+  margin-bottom: 1.5rem;
+}
+
+/* Escala 50–950: una fila por escalón, como una tabla de tokens */
+.escala {
+  display: grid;
+  gap: 2px;
+  margin: 1.5rem 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.escalon {
+  display: grid;
+  grid-template-columns: 3.25rem 3rem minmax(0, 1fr) auto;
+  align-items: center;
+  gap: .9rem;
+  width: 100%;
+  padding: .3rem .6rem .3rem .3rem;
+  text-align: left;
+  font-variant-numeric: tabular-nums;
+  background: none;
+  border: 0;
+  border-radius: 12px;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+  transition: background-color 160ms var(--curva);
+}
+
+@media (hover: hover) {
+  .escalon:hover {
+    background: var(--superficie);
+  }
+}
+
+/* El escalón más parecido al tono o gris elegido */
+.escalon.actual {
+  background: var(--superficie);
+  box-shadow: inset 0 0 0 1.5px var(--tinta);
+}
+
+.escalon__muestra {
+  display: grid;
+  place-items: center;
+  height: 2.5rem;
+  border-radius: 9px;
+  font-size: .8125rem;
+  font-weight: 600;
+  color: var(--sobre);
+  background-color: var(--c);
+  box-shadow: inset 0 0 0 1px var(--borde-segmento);
+  transition: background-color 300ms var(--curva), color 300ms var(--curva);
+}
+
+.escalon__paso {
+  font-family: var(--display);
+  font-weight: 600;
+  font-size: 1.0625rem;
+}
+
+.escalon__valor {
+  font-weight: 500;
+  letter-spacing: .02em;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.escalon__contraste {
+  font-size: .8125rem;
+  color: var(--tinta-2);
 }
 
 /* --------------------------------------------------------------------------
