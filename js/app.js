@@ -1,7 +1,7 @@
 /* ==========================================================================
    Círculo Cromático — js/app.js
 
-   Rueda RYB de 24 colores con armonías (tríada, complementario, análogo,
+   Rueda RYB de 48 colores con armonías (tríada, complementario, análogo,
    complementario dividido y tétrada), tonos, copia en HEX/RGB/HSL y enlace
    para compartir.
 
@@ -21,59 +21,65 @@
      ------------------------------------------------------------------------ */
 
   /**
-   * 24 colores del círculo tradicional (RYB) en sentido horario desde el
-   * amarillo (0°), cada 15°. Primarios a 0°, 120° y 240°; secundarios entre
+   * 48 colores del círculo tradicional (RYB) en sentido horario desde el
+   * amarillo (0°), cada 7,5°. Primarios a 0°, 120° y 240°; secundarios entre
    * ellos; terciarios entre primario y secundario; y entre cada par vecino,
-   * un color intermedio.
+   * colores intermedios (dos niveles: cada 15° y cada 7,5°).
    */
   const COLORES = [
-    ['Amarillo', '#FFD400'], ['Amarillo dorado', '#FFBE00'], ['Amarillo-naranja', '#FFA800'], ['Mandarina', '#FF9100'],
-    ['Naranja', '#FF7B00'], ['Calabaza', '#FA6110'], ['Rojo-naranja', '#F4471C'], ['Bermellón', '#EC3420'],
-    ['Rojo', '#E2231A'], ['Carmín', '#D11A45'], ['Rojo-violeta', '#C0186D'], ['Púrpura', '#9F2196'],
-    ['Violeta', '#7D2BB5'], ['Amatista', '#6433BD'], ['Azul-violeta', '#4C3CC4'], ['Ultramar', '#344ECB'],
-    ['Azul', '#1D5FD1'], ['Cerúleo', '#0A7DC0'], ['Azul-verde', '#0098A6'], ['Esmeralda', '#10A07A'],
-    ['Verde', '#1FA74A'], ['Verde hierba', '#5BB832'], ['Amarillo-verde', '#9BCB1C'], ['Lima', '#CFD20E'],
+    ['Amarillo', '#FFD400'], ['Girasol', '#FFC900'], ['Amarillo dorado', '#FFBE00'], ['Ámbar', '#FFB300'],
+    ['Amarillo-naranja', '#FFA800'], ['Azafrán', '#FF9C00'], ['Mandarina', '#FF9100'], ['Zanahoria', '#FF8600'],
+    ['Naranja', '#FF7B00'], ['Papaya', '#FD6E08'], ['Calabaza', '#FA6110'], ['Teja', '#F75416'],
+    ['Rojo-naranja', '#F4471C'], ['Tomate', '#F03D1E'], ['Bermellón', '#EC3420'], ['Escarlata', '#E72B1D'],
+    ['Rojo', '#E2231A'], ['Rubí', '#DA1E2F'], ['Carmín', '#D11A45'], ['Frambuesa', '#C81959'],
+    ['Rojo-violeta', '#C0186D'], ['Magenta', '#AF1C81'], ['Púrpura', '#9F2196'], ['Uva', '#8E26A5'],
+    ['Violeta', '#7D2BB5'], ['Jacaranda', '#702FB9'], ['Amatista', '#6433BD'], ['Índigo', '#5837C0'],
+    ['Azul-violeta', '#4C3CC4'], ['Zafiro', '#4045C7'], ['Ultramar', '#344ECB'], ['Cobalto', '#2856CE'],
+    ['Azul', '#1D5FD1'], ['Azur', '#136EC8'], ['Cerúleo', '#0A7DC0'], ['Pavo real', '#058AB3'],
+    ['Azul-verde', '#0098A6'], ['Turquesa', '#089C90'], ['Esmeralda', '#10A07A'], ['Jade', '#17A362'],
+    ['Verde', '#1FA74A'], ['Trébol', '#3DAF3E'], ['Verde hierba', '#5BB832'], ['Manzana', '#7BC127'],
+    ['Amarillo-verde', '#9BCB1C'], ['Pera', '#B5CE15'], ['Lima', '#CFD20E'], ['Limón', '#E7D307'],
   ].map(([nombre, hex], i) => ({ nombre, hex, categoria: categoriaDe(i), slug: aSlug(nombre) }));
 
   function categoriaDe(i) {
-    if (i % 8 === 0) return 'primario';
-    if (i % 8 === 4) return 'secundario';
-    if (i % 2 === 0) return 'terciario';
+    if (i % 16 === 0) return 'primario';
+    if (i % 16 === 8) return 'secundario';
+    if (i % 8 === 4) return 'terciario';
     return 'intermedio';
   }
 
-  const TOTAL = COLORES.length;   // 24
-  const PASO = 360 / TOTAL;       // 15° por color
+  const TOTAL = COLORES.length;   // 48
+  const PASO = 360 / TOTAL;       // 7,5° por color
 
-  /** Armonías: posiciones relativas al color elegido (en pasos de 15°). */
+  /** Armonías: posiciones relativas al color elegido (en pasos de 7,5°). */
   const ARMONIAS = {
     triada: {
       nombre: 'Tríada',
-      pasos: [0, 8, 16],
+      pasos: [0, 16, 32],
       periodo: 120,   // la figura se repite cada 120°: la capa gira por el camino más corto
       texto: 'Tres colores separados 120°. Contraste vivo y equilibrado: deja que uno domine y usa los otros como acento.',
     },
     complementario: {
       nombre: 'Complementario',
-      pasos: [0, 12],
+      pasos: [0, 24],
       periodo: 180,
       texto: 'Dos colores opuestos, a 180°. Es el contraste más fuerte: úsalo para que algo destaque.',
     },
     analogo: {
       nombre: 'Análogo',
-      pasos: [0, 2, 22],
+      pasos: [0, 4, 44],
       periodo: 360,
       texto: 'Tu color y sus vecinos a 30°. Una combinación tranquila y natural, con poco contraste.',
     },
     dividido: {
       nombre: 'Complementario dividido',
-      pasos: [0, 10, 14],
+      pasos: [0, 20, 28],
       periodo: 360,
       texto: 'Tu color y los dos vecinos de su opuesto (150° y 210°). Contraste fuerte, más fácil de equilibrar que el complementario.',
     },
     tetrada: {
       nombre: 'Tétrada',
-      pasos: [0, 6, 12, 18],
+      pasos: [0, 12, 24, 36],
       periodo: 90,
       texto: 'Cuatro colores a 90°: dos parejas de complementarios. Paleta rica que funciona mejor si uno manda.',
     },
@@ -87,7 +93,7 @@
   };
 
   /** Geometría del dibujo en unidades del viewBox (-120 … 120). */
-  const GEO = { exterior: 100, interior: 64, marcador: 82, hueco: 2.2, esquina: 3 };
+  const GEO = { exterior: 100, interior: 64, marcador: 82, hueco: 1.5, esquina: 1.6 };
   const RADIO_CENTRO = 56;          // disco central (zona para desplazar la página en táctil)
 
   const MUELLE = { w: 0.013, z: 0.82 };   // asentado con un rebote casi imperceptible
@@ -142,6 +148,8 @@
   const capitalizar = (t) => t.charAt(0).toUpperCase() + t.slice(1);
   const sinMovimiento = () => preferenciaMovimiento.matches;
   const indiceEn = (angulo) => mod(Math.round(-angulo / PASO), TOTAL);
+  /** "7,5°" con coma decimal. */
+  const grados = (g) => `${String(g).replace('.', ',')}°`;
 
   /** Lleva un ángulo a (-180, 180] para girar por el camino corto. */
   function normalizar(a) {
@@ -309,7 +317,7 @@
     svg.append(crearSVG('path', { class: 'velo', d: velo.join('') }));
 
     // Marcadores: anillos blancos huecos (dejan ver el color); el del color elegido, mayor
-    const radioMarcador = (p) => (p === 0 ? 8.5 : 6.5);
+    const radioMarcador = (p) => (p === 0 ? 7.2 : 5.6);
     const vertices = [...pasos].sort((x, y) => x - y).map((p) => ({ punto: polar(GEO.marcador, p * PASO), r: radioMarcador(p) }));
 
     // Polígono que une los colores: cada lado se recorta en el borde de los marcadores
@@ -476,7 +484,7 @@
     lecturaNombre.textContent = color.nombre;
     lecturaHex.textContent = color.hex;
     lecturaTipo.textContent = capitalizar(color.categoria);
-    lecturaGrados.textContent = `${i * PASO}°`;
+    lecturaGrados.textContent = grados(i * PASO);
     rueda.setAttribute('aria-activedescendant', `color-${i}`);
     girarCapa(i);
   }
@@ -752,10 +760,15 @@
     rueda.classList.remove('arrastrando');
     capa.classList.remove('inmediata');
 
-    // Toque sin arrastrar: elegir el color tocado
+    // Toque sin arrastrar: se elige el color por el ángulo del toque (con 48 colores
+    // los sectores son finos; así también vale tocar el hueco entre dos)
     if (!datos.movido) {
-      if (datos.segmento && !cancelado) {
-        const i = Number(datos.segmento.dataset.indice);
+      const distancia = Math.hypot(datos.x - datos.c.x, datos.y - datos.c.y);
+      const escala = datos.c.radio / 120;
+      const enAnillo = distancia > GEO.interior * 0.9 * escala && distancia < (GEO.exterior + 8) * escala;
+      if (enAnillo && !cancelado) {
+        const angulo = (Math.atan2(datos.x - datos.c.x, -(datos.y - datos.c.y)) * 180) / Math.PI;
+        const i = mod(Math.round((angulo - mov.x) / PASO), TOTAL);
         irAColor(i);
         seleccionar(i);
       } else {

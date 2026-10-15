@@ -1,4 +1,4 @@
-Bricolage Grotesque - Copyright The Bricolage Grotesque Project Authors (https://github.com/ateliertriay/bricolage)
+Manrope - Copyright The Manrope Project Authors (https://github.com/sharanda/manrope)
 
 
 This Font Software is licensed under the SIL Open Font License, Version 1.1.
