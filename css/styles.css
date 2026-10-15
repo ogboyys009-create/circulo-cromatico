@@ -49,6 +49,7 @@ html {
 
 body {
   margin: 0;
+  background: var(--marfil);
   font-family: var(--sans);
   font-size: 1rem;
   line-height: 1.6;
@@ -274,7 +275,9 @@ body::before {
   inset: 0;
   border-radius: 50%;
   cursor: grab;
-  touch-action: none;          /* el arrastre gira la rueda en vez de desplazar la página */
+  /* el desplazamiento vertical solo se permite desde el disco central: en el anillo,
+     js/app.js cancela el gesto del navegador para que el dedo gire la rueda */
+  touch-action: pan-y;
   user-select: none;
   -webkit-user-select: none;
   -webkit-touch-callout: none;

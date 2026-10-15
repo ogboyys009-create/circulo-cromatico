@@ -772,12 +772,18 @@
     return (Math.atan2(e.clientX - centro.x, -(e.clientY - centro.y)) * 180) / Math.PI;
   }
 
+  /** El disco central queda libre en pantallas táctiles para poder desplazar la página. */
+  function enDiscoCentral(x, y, centro) {
+    return Math.hypot(x - centro.x, y - centro.y) < centro.radio * (GEO.centro / 200);
+  }
+
   rueda.addEventListener('pointerdown', (e) => {
     if (e.pointerType === 'mouse' && e.button !== 0) return;
     sonido.desbloquear();
+    const centro = centroDeRueda();
+    if (e.pointerType !== 'mouse' && enDiscoCentral(e.clientX, e.clientY, centro)) return;
     estado.tactil = e.pointerType !== 'mouse';
     estado.interactuado = true;
-    const centro = centroDeRueda();
     arrastre = {
       id: e.pointerId,
       x: e.clientX,
@@ -857,6 +863,18 @@
   rueda.addEventListener('pointercancel', (e) => terminarArrastre(e, true));
   rueda.addEventListener('lostpointercapture', (e) => terminarArrastre(e, true));
   rueda.addEventListener('contextmenu', (e) => e.preventDefault());
+
+  // Móvil: el dedo sobre el anillo de colores gira la rueda y no mueve la página;
+  // sobre el disco central, la página se desplaza con normalidad (touch-action: pan-y en CSS)
+  rueda.addEventListener('touchstart', (e) => {
+    const toque = e.touches[0];
+    if (!toque || e.touches.length > 1) return;
+    if (!enDiscoCentral(toque.clientX, toque.clientY, centroDeRueda())) e.preventDefault();
+  }, { passive: false });
+
+  // iOS solo activa el audio al terminar un toque o con un clic
+  document.addEventListener('touchend', () => sonido.desbloquear(), { passive: true });
+  document.addEventListener('click', () => sonido.desbloquear());
 
   // Ratón: el triángulo punteado anticipa la tríada del color señalado
   rueda.addEventListener('pointerover', (e) => {
