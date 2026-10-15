@@ -3,6 +3,8 @@
 Rueda cromática interactiva de 12 colores basada en la teoría del color tradicional (RYB).
 Gira la rueda, elige un color y descubre su **tríada**: los dos colores que están a 120° de él.
 
+**Verla en línea:** <https://ogboyys009-create.github.io/circulo-cromatico/>
+
 Hecha solo con **HTML, CSS y JavaScript nativos**, sin frameworks ni dependencias.
 Se abre directamente en el navegador y se puede publicar tal cual con GitHub Pages.
 
